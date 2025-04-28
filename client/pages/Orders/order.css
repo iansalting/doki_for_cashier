@@ -1,0 +1,109 @@
+/* order.css */
+.orders-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 10px;
+    font-family: sans-serif;
+    color: #000;
+  }
+  
+  h1 {
+    font-size: 24px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-weight: bold;
+  }
+  
+  .order-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    background-color: #f7f7f7;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .order-header,
+  .order-totals,
+  .order-actions {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin-right: 12px;
+  }
+  
+  .order-header h2 {
+    font-size: 16px;
+    margin: 0;
+    font-weight: bold;
+  }
+  
+  .order-header p {
+    margin: 3px 0;
+    font-size: 14px;
+  }
+  
+  .status-completed {
+    color: green;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  
+  .status-cancelled {
+    color: red;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  
+  .status-pending {
+    font-weight: bold;
+    font-size: 14px;
+  }
+  
+  .order-items {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0 12px;
+    font-size: 14px;
+  }
+  
+  .order-totals {
+    font-weight: bold;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  
+  .status-buttons {
+    display: flex;
+    gap: 6px;
+  }
+  
+  .status-buttons button {
+    padding: 5px 10px;
+    font-size: 13px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .btn-complete {
+    background-color: #000;
+    color: white;
+  }
+  
+  .btn-cancel {
+    background-color: #666;
+    color: white;
+  }
+  
+  .status-buttons button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }

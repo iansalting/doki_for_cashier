@@ -1,0 +1,5 @@
+export { default as Dashboard} from "./Dashboard/dashboard"
+export { default as Orders} from "./Orders/orders"
+export { default as Login} from "./auth/login"
+export { default as Register} from "./auth/register"
+export { default as Inventory } from "./Inventory/inventory"
