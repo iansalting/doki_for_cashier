@@ -1,0 +1,174 @@
+/* ingredientPage.css */
+
+/* Root container */
+.ingredients-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: #fff;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+}
+
+/* Containers */
+.container-1,
+.container-2 {
+  background: #fafafa;
+  border-radius: 0.8rem;
+  padding: 1.8rem;
+  flex: 1 1 320px;
+  min-width: 300px;
+  max-width: 480px;
+  box-shadow: 0 2px 8px rgba(255, 97, 0, 0.12);
+}
+
+@media (max-width: 900px) {
+  .ingredients-container {
+    flex-direction: column;
+    padding: 1rem;
+  }
+  .container-1,
+  .container-2 {
+    max-width: 100%;
+  }
+}
+
+/* Headings */
+.container-1 h1,
+.container-2 h2 {
+  color: rgba(255, 97, 0, 1);
+  margin-bottom: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Scrollable ingredient list */
+.ingredients-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 350px;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 0.6rem;
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.05);
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 97, 0, 0.6) #f0f0f0;
+}
+
+.ingredients-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ingredients-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 97, 0, 0.6);
+  border-radius: 4px;
+}
+
+.ingredients-list::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+/* Individual ingredient item */
+.ingredient-item {
+  background: #fff;
+  border-left: 5px solid rgba(255, 97, 0, 1);
+  border-radius: 0.5rem;
+  margin: 0.5rem 1rem;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 1px 5px rgba(255, 97, 0, 0.1);
+}
+
+.ingredient-item h2 {
+  margin: 0 0 0.3rem 0;
+  font-size: 1.2rem;
+  color: rgba(255, 97, 0, 1);
+}
+
+.ingredient-item p {
+  margin: 0.2rem 0;
+  color: #555;
+  font-size: 1rem;
+}
+
+/* Add Ingredient Form */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+form label {
+  font-weight: 600;
+  color: #444;
+  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+form input[type="text"] {
+  padding: 0.5rem 0.7rem;
+  border: 1.5px solid rgba(255, 97, 0, 0.3);
+  border-radius: 0.4rem;
+  font-size: 1rem;
+  outline: none;
+  background: #fff;
+  transition: border-color 0.2s ease;
+}
+
+form input[type="text"]:focus {
+  border-color: rgba(255, 97, 0, 1);
+}
+
+button[type="submit"] {
+  background: rgba(255, 97, 0, 1);
+  color: #fff;
+  border: none;
+  border-radius: 0.4rem;
+  padding: 0.7rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  align-self: flex-start;
+}
+
+button[type="submit"]:hover,
+button[type="submit"]:focus {
+  background: #d75b00;
+}
+
+/* Success and error messages */
+.container-2 > div[style] {
+  margin-top: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  user-select: none;
+}
+
+.container-2 > div[style][style*="green"] {
+  color: #2e7d32; /* Success green */
+}
+
+.container-2 > div[style][style*="red"] {
+  color: #c62828; /* Error red */
+}
+
+/* Responsive tweaks */
+@media (max-width: 600px) {
+  .ingredients-container {
+    padding: 1rem;
+  }
+  .container-1,
+  .container-2 {
+    padding: 1.2rem;
+  }
+  .ingredient-item {
+    margin: 0.4rem 0.6rem;
+  }
+}

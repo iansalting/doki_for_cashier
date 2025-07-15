@@ -15,6 +15,7 @@ const IngredientSchema = new mongoose.Schema({
       required: true,
       enum: ['g', 'kg', 'ml', 'l', 'pcs']
     },
+    
   }, {timestamps: true})
 
 const ingredient = mongoose.model('Ingredient', IngredientSchema);

@@ -4,26 +4,36 @@ import jwt from "jsonwebtoken";
 
 dotenv.config();
 
-const verifyToken =  (req, res, next) => {
-  let token;
-  let authHeader = req.headers.Authorization || req.headers.authorization;
+const verifyToken = (req, res, next) => {
+    let token;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    
 
-  if (authHeader && authHeader.startsWith("Bearer")) {
-    token = authHeader.split(" ")[1];
-  }
+    console.log("Headers received:", req.headers);
+    console.log("Auth header:", authHeader);
 
-  if(!token){
-    return res.status(401).json({message: "No Token, Authorization denied"})
-  }
+    if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
+        console.log("Token extracted:", token);
+    }
 
-  try{
-    const decode = jwt.verify(token, Config.accessTokenSecret);
-    req.user = decode;
-    console.log("The decoded user is: ", req.user);
-    next()
-  }catch(err){
-    res.status(400).json({message: "Token is not valid"})
-  }
+    if (!token) {
+        console.log("No token found");
+        return res.status(401).json({ message: "No Token, Authorization denied" });
+    }
+
+    try {
+        const decode = jwt.verify(token, Config.accessTokenSecret);
+        
+        req.user = { 
+            id: decode._id || decode.id, 
+            role: decode.role 
+        };
+
+        next();
+    } catch (err) {
+        return res.status(401).json({ message: "Token is not valid" });
+    }
 };
 
 export default verifyToken;

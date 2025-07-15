@@ -2,17 +2,17 @@ import mongoose from "mongoose"
 
 const orderSchema = new mongoose.Schema({
     tableNumber: {
-        type: String,
+        type: Number,
         required: true
     },
     status: {
         type: String,
-        enum: ['pending', 'completed', 'cancelled'],
+        enum: ['pending','completed'],
         default: 'pending'
     },
     orderDate: {
         type: Date,
-        default : Date.now()
+        default : Date.now
     },
     bills: {
         total: { type: Number, required: true},
@@ -31,7 +31,7 @@ const orderSchema = new mongoose.Schema({
             }
          }
     ],
-    paymennt: {
+    payment: {
         type: String,
         default: "cashless",
         required:true

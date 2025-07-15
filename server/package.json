@@ -8,9 +8,12 @@
     "express": "^4.21.2",
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
+    "luxon": "^3.7.1",
     "mongoose": "^8.12.1",
+    "pdfkit": "^0.17.1",
     "pg": "^8.14.0",
     "sequelize": "^6.37.6",
+    "socket.io": "^4.8.1",
     "stripe": "^18.0.0"
   },
   "name": "server",

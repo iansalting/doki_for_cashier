@@ -21,5 +21,5 @@ const adminSchema = new mongoose.Schema({
 
 
 
-const user = mongoose.model("user", adminSchema);
+const user = mongoose.model("admins", adminSchema);
 export default user;

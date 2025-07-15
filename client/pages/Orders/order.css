@@ -1,109 +1,142 @@
-/* order.css */
 .orders-container {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 10px;
-    font-family: sans-serif;
-    color: #000;
-  }
-  
-  h1 {
-    font-size: 24px;
-    margin-bottom: 15px;
-    text-align: center;
-    font-weight: bold;
-  }
-  
-  .order-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border: 1px solid #aaa;
-    border-radius: 4px;
-    padding: 8px 12px;
-    margin-bottom: 10px;
-    font-size: 14px;
-    background-color: #f7f7f7;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-  
-  .order-header,
-  .order-totals,
-  .order-actions {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    margin-right: 12px;
-  }
-  
-  .order-header h2 {
-    font-size: 16px;
-    margin: 0;
-    font-weight: bold;
-  }
-  
-  .order-header p {
-    margin: 3px 0;
-    font-size: 14px;
-  }
-  
-  .status-completed {
-    color: green;
-    font-weight: bold;
-    font-size: 14px;
-  }
-  
-  .status-cancelled {
-    color: red;
-    font-weight: bold;
-    font-size: 14px;
-  }
-  
-  .status-pending {
-    font-weight: bold;
-    font-size: 14px;
-  }
-  
-  .order-items {
-    flex-grow: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    margin: 0 12px;
-    font-size: 14px;
-  }
-  
-  .order-totals {
-    font-weight: bold;
-    font-size: 15px;
-    white-space: nowrap;
-  }
-  
-  .status-buttons {
-    display: flex;
-    gap: 6px;
-  }
-  
-  .status-buttons button {
-    padding: 5px 10px;
-    font-size: 13px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-  }
-  
-  .btn-complete {
-    background-color: #000;
-    color: white;
-  }
-  
-  .btn-cancel {
-    background-color: #666;
-    color: white;
-  }
-  
-  .status-buttons button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.orders-container h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.order-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  height: auto;
+  min-height: 180px;
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.order-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.4em;
+}
+
+.order-header p {
+  margin: 5px 0;
+  color: #666;
+  font-size: 0.9em;
+}
+
+.status-pending {
+  color: #f39c12;
+  font-weight: bold;
+}
+
+.status-preparing {
+  color: #3498db;
+  font-weight: bold;
+}
+
+.status-ready {
+  color: #27ae60;
+  font-weight: bold;
+}
+
+.status-completed {
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+.status-cancelled {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.order-items {
+  margin-bottom: 15px;
+}
+
+.order-items h3 {
+  margin: 0 0 10px 0;
+  color: #34495e;
+  font-size: 1.1em;
+}
+
+.order-items ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.order-items li {
+  padding: 5px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.order-items li:last-child {
+  border-bottom: none;
+}
+
+.order-items p {
+  margin: 0;
+  color: #555;
+}
+
+.order-totals {
+  margin-bottom: 15px;
+}
+
+.order-actions {
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+}
+
+.order-actions h4 {
+  margin: 0 0 10px 0;
+  color: #34495e;
+  font-size: 1em;
+}
+
+.status-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-complete {
+  background-color: #eea508;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.3s ease;
+}
+
+.btn-complete:hover:not(:disabled) {
+  background-color: #f1941a;
+}
+
+.btn-complete:disabled {
+  background-color: #fdb61e;
+  cursor: not-allowed;
+}

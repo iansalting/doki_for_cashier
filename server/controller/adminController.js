@@ -58,41 +58,38 @@ const login = async (req, res, next) => {
             return next(createHttpError(400, "All fields are required"));
         }
 
-        const isUserPresent = await User.findOne({ username });
-        if (!isUserPresent) {
-            return next(createHttpError(401, "Invalid Credentials"));
+        const user = await User.findOne({ username });
+        if (!user) {
+            return next(createHttpError(401, "Invalid credentials"));
         }
 
-
-        const isMatch = await bcrypt.compare(password, isUserPresent.password);
+        const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return next(createHttpError(401, "Invalid Credentials"));
+            return next(createHttpError(401, "Invalid credentials"));
         }
 
         const token = jwt.sign(
-             { _id: isUserPresent._id, 
-               role: isUserPresent.role
-             },
+            { _id: user._id, role: user.role },
             Config.accessTokenSecret,
             { expiresIn: '1d' }
         );
 
-
-
         res.status(200).json({
             success: true,
-            message: "User  logged in successfully",
+            message: "User logged in successfully",
             token,
             user: {
-                _id: isUserPresent._id,
-                username: isUserPresent.username,
-                role: isUserPresent.role
+                _id: user._id,
+                username: user.username,
+                role: user.role
             }
         });
+
     } catch (error) {
         next(error);
     }
 };
+
 
 const getUserData = async (req, res, next) => {
     try {
@@ -108,6 +105,8 @@ const getUserData = async (req, res, next) => {
         next(error);
     }
 };
+
+
 
 
 
