@@ -9,6 +9,7 @@ const getAllIngredient = async (req, res, next) => {
       id: ingredient._id,
       name: ingredient.name,
       quantity: ingredient.quantity,
+      unit: ingredient.unit,
     }));
 
     res.json(response);
@@ -93,17 +94,20 @@ const updateIngredient = async (req, res, next) => {
 
 const deleteIngredient = async (req, res, next) => {
   try {
-    const ingredient = Ingredient.findById(req.params.id);
+    const ingredient = await Ingredient.findByIdAndDelete(req.params.id);
     if (!ingredient) {
-      const error = createHttpError(404, "Item not found");
+      const error = createHttpError(404, "Ingredient not found");
       return next(error);
     }
-    res.status(201).json({ success: true, message: "Item deleted" });
+    
+    res.status(200).json({ 
+      success: true, 
+      message: "Ingredient deleted successfully" 
+    });
   } catch (error) {
     next(error);
   }
 };
-
 export {
   getAllIngredient,
   getIngredientById,

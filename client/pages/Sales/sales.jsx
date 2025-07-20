@@ -2,14 +2,18 @@ import React, { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
   Cell,
 } from "recharts";
-import "./sales.css"; // Make sure you include styles for both parts
+
+import "./sales.css";
 
 const Sales = () => {
   const [topSales, setTopSales] = useState([]);
@@ -26,7 +30,7 @@ const Sales = () => {
 
   const TOP_SALES_API = "http://localhost:8000/view/superadmin/sales/";
   const DAILY_SALES_API = "http://localhost:8000/view/superadmin/sales/daily";
-  const MONTHLY_SALES_API = `http://localhost:8000/view/superadmin/monthly-sales?year=${selectedYear}`;
+  const MONTHLY_SALES_API = `http://localhost:8000/view/superadmin/Sales/monthly?year=${selectedYear}`;
 
   const token = localStorage.getItem("token");
 
@@ -35,7 +39,6 @@ const Sales = () => {
       try {
         setLoadingTop(true);
         const response = await fetch(TOP_SALES_API, {
-          method: "GET",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -86,32 +89,32 @@ const Sales = () => {
   }, [token]);
 
   useEffect(() => {
-  const fetchMonthlySales = async () => {
-    try {
-      setMonthlyLoading(true);
-      const response = await fetch(MONTHLY_SALES_API, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const fetchMonthlySales = async () => {
+      try {
+        setMonthlyLoading(true);
+        const response = await fetch(MONTHLY_SALES_API, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      const result = await response.json();
-      if (result.success) {
-        setMonthlySales(result.data.monthlySales);
-        setMonthlySummary(result.data.summary);
-      } else {
-        throw new Error(result.message);
+        const result = await response.json();
+        if (result.success) {
+          setMonthlySales(result.data.monthlySales);
+          setMonthlySummary(result.data.summary);
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (err) {
+        setMonthlyError(err.message);
+      } finally {
+        setMonthlyLoading(false);
       }
-    } catch (err) {
-      setMonthlyError(err.message);
-    } finally {
-      setMonthlyLoading(false);
-    }
-  };
+    };
 
-  fetchMonthlySales();
-}, [selectedYear, token]);
+    fetchMonthlySales();
+  }, [selectedYear, token]);
 
   const colors = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
@@ -124,7 +127,10 @@ const Sales = () => {
           <p>Category: {data.category}</p>
           <p>Price: ${data.itemPrice}</p>
           <p>Qty Sold: {data.totalQuantitySold}</p>
-          <p>Total Revenue: ${data.totalRevenue.toFixed(2)}</p>
+          <p>
+            Total Revenue: $
+            {data.totalRevenue ? data.totalRevenue.toFixed(2) : "N/A"}
+          </p>
         </div>
       );
     }
@@ -137,7 +143,7 @@ const Sales = () => {
       <h2 className="sales-title">📆 Daily Sales Summary</h2>
       {loadingDaily ? (
         <div className="sales-loading">
-          <div className="sales-spinner"></div>
+          <div className="sales-spinner" />
         </div>
       ) : errorDaily ? (
         <div className="sales-error">Error: {errorDaily}</div>
@@ -187,7 +193,7 @@ const Sales = () => {
       <h2 className="sales-title">🔥 Top 5 Best-Selling Items</h2>
       {loadingTop ? (
         <div className="sales-loading">
-          <div className="sales-spinner"></div>
+          <div className="sales-spinner" />
         </div>
       ) : errorTop ? (
         <div className="sales-error">Error: {errorTop}</div>
@@ -212,10 +218,107 @@ const Sales = () => {
           </ResponsiveContainer>
         </div>
       )}
-      
+
+      {/* Monthly Sales Line Graph */}
+      <h2 className="sales-title">📈 Monthly Sales Overview</h2>
+      <div className="sales-year-selector">
+        <label htmlFor="year">Select Year:</label>
+        <input
+          type="number"
+          id="year"
+          min="2000"
+          max="3000"
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(e.target.value)}
+        />
+      </div>
+
+      {monthlyLoading ? (
+        <div className="sales-loading">
+          <div className="sales-spinner" />
+        </div>
+      ) : monthlyError ? (
+        <div className="sales-error">Error: {monthlyError}</div>
+      ) : (
+        <>
+          <div style={{ height: "400px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={monthlySales}
+                margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="monthName" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="totalRevenue"
+                  stroke="#10B981"
+                  name="Total Revenue"
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="totalOrders"
+                  stroke="#3B82F6"
+                  name="Total Orders"
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="averageOrderValue"
+                  stroke="#F59E0B"
+                  name="Avg Order Value"
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="sales-summary">
+            <h3>📊 Yearly Summary for {selectedYear}</h3>
+            <p>
+              <strong>Total Revenue:</strong> ₱
+              {monthlySummary?.totalYearlyRevenue != null
+                ? monthlySummary.totalYearlyRevenue.toFixed(2)
+                : "N/A"}
+            </p>
+            <p>
+              <strong>Total Orders:</strong>{" "}
+              {monthlySummary?.totalYearlyOrders != null
+                ? monthlySummary.totalYearlyOrders
+                : "N/A"}
+            </p>
+            <p>
+              <strong>Avg Order Value:</strong> ₱
+              {monthlySummary?.averageOrderValue != null
+                ? monthlySummary.averageOrderValue.toFixed(2)
+                : "N/A"}
+            </p>
+            <p>
+              <strong>Revenue Growth:</strong>{" "}
+              {monthlySummary?.revenueGrowth != null
+                ? monthlySummary.revenueGrowth
+                : "N/A"}
+              %
+            </p>
+            <p>
+              <strong>Order Growth:</strong>{" "}
+              {monthlySummary?.orderGrowth != null
+                ? monthlySummary.orderGrowth
+                : "N/A"}
+              %
+            </p>
+          </div>
+        </>
+      )}
     </div>
   );
-  
 };
 
 export default Sales;

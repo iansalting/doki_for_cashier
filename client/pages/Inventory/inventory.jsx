@@ -17,7 +17,7 @@ export default function InventoryAndMenuView() {
           value={selectedPage}
           onChange={(e) => setSelectedPage(e.target.value)}
         >
-          <option value="ingredients">Ingredients</option>
+          <option value="ingredients">Storage</option>
           <option value="menu">Menu List</option>
         </select>
       </div>

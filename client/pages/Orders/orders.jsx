@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import "./order.css";
 
@@ -10,13 +11,14 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const navigate = useNavigate();
 
-    useEffect(() => {
+  useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -40,7 +42,6 @@ export default function Orders() {
 
   useEffect(() => {
     socket.on("new-order", (newOrder) => {
-      // Only add to display if it's pending
       if (newOrder.status === "pending") {
         setOrders((prevOrders) => [newOrder, ...prevOrders]);
       }
@@ -48,23 +49,6 @@ export default function Orders() {
 
     return () => {
       socket.off("new-order");
-    };
-  }, []);
-
-  useEffect(() => {
-    const socket = io("http://localhost:5000");
-
-    socket.on("new-order", (orderData) => {
-      console.log("New order received in real-time:", orderData);
-      
-      // Only add to display if it's pending
-      if (orderData.status === "pending") {
-        setOrders((prev) => [orderData, ...prev]);
-      }
-    });
-
-    return () => {
-      socket.disconnect();
     };
   }, []);
 
@@ -100,52 +84,60 @@ export default function Orders() {
   if (loading) return <div>Loading orders...</div>;
   if (error) return <div>Error: {error}</div>;
 
-  return (
+return (
     <div className="orders-container">
-      <h1>Pending Orders</h1>
-      {orders.length === 0 ? (
-        <p>No pending orders found</p>
-      ) : (
-        orders.map((order) => (
-          <div key={order._id} className="order-card">
-            <div className="order-header">
-              <h2>Table #{order.tableNumber || "N/A"}</h2>
-              <p>Date: {new Date(order.orderDate).toLocaleString()}</p>
-              <p>
-                Status:{" "}
-                <span className={`status-${order.status}`}>{order.status}</span>
-              </p>
-            </div>
-            <div className="order-items">
-              <h3>Items:</h3>
-              <ul>
-                {order.items.map((item, index) => (
-                  <li key={index}>
-                    <p>
-                      <strong>{item.menuItem.name}</strong> x{item.quantity}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="order-actions">
-              <h4>Update Status:</h4>
-              <div className="status-buttons">
-                <button
-                  onClick={() => handleUpdateOrder(order._id, "completed")}
-                  disabled={
-                    updatingOrderId === order._id ||
-                    order.status === "completed"
-                  }
-                  className="btn-complete"
-                >
-                  {updatingOrderId === order._id ? "Updating..." : "Complete"}
-                </button>
-              </div>
-            </div>
-          </div>
-        ))
-      )}
+        <h1>Pending Orders</h1>
+        {orders.length === 0 ? (
+            <p>No pending orders found</p>
+        ) : (
+            orders.map((order) => (
+                <div key={order._id} className="order-card">
+                    <div className="order-header">
+                        <h2>Table #{order.tableNumber || "N/A"}</h2>
+                        <p>Date: {new Date(order.orderDate).toLocaleString()}</p>
+                        <p>
+                            Status:{" "}
+                            <span className={`status-${order.status}`}>{order.status}</span>
+                        </p>
+                    </div>
+                    <div className="order-items">
+                        <h3>Items:</h3>
+                        <ul>
+                            {order.items && order.items.length > 0 ? (
+                                order.items.map((item, index) => (
+                                    <li key={index}>
+                                        <p>
+                                            <strong>
+                                                {item?.menuItem?.name || "Unknown Item"}
+                                            </strong>{" "}
+                                            (Size: {item.selectedSize || "N/A"}) x{item?.quantity || 0}
+                                        </p>
+                                    </li>
+                                ))
+                            ) : (
+                                <li>No items found</li>
+                            )}
+                        </ul>
+                    </div>
+                    <div className="order-actions">
+                        <h4>Update Status:</h4>
+                        <div className="status-buttons">
+                            <button
+                                onClick={() => handleUpdateOrder(order._id, "completed")}
+                                disabled={
+                                    updatingOrderId === order._id ||
+                                    order.status === "completed"
+                                }
+                                className="btn-complete"
+                            >
+                                {updatingOrderId === order._id ? "Updating..." : "Complete"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ))
+        )}
     </div>
-  );
+);
+
 }

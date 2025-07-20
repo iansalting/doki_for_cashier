@@ -314,8 +314,6 @@ const getMonthlySales = async (req, res) => {
     );
     const averageYearlyOrder =
       totalYearlyOrders > 0 ? totalYearlyRevenue / totalYearlyOrders : 0;
-
-    // Get previous year data for comparison
     const previousYear = targetYear - 1;
     const previousYearStart = new Date(previousYear, 0, 1);
     const previousYearEnd = new Date(previousYear, 11, 31, 23, 59, 59, 999);

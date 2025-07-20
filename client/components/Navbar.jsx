@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import './Navbar.css';
+import React, { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import "./Navbar.css";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (isMenuOpen && !event.target.closest('.navbar')) {
+      if (isMenuOpen && !event.target.closest(".navbar")) {
         setIsMenuOpen(false);
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, [isMenuOpen]);
 
   const toggleMenu = () => {
@@ -27,20 +27,33 @@ const Navbar = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     sessionStorage.clear();
-    
 
-    navigate('/');
+    navigate("/");
   };
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard' },
-    { path: '/delivery', label: 'Delivery' },
-    { path: '/inventory', label: 'Inventory' },
-    { path: '/orders', label: 'Order' },
-    { path: '/sales', label: 'Sales' }
+    { path: "/dashboard", label: "Dashboard" },
+    { path: "/orders", label: "Order" },
+    {
+      label: "Sales Report",
+      dropdown: [
+        { path: "/salesreport/storage", label: "Storage" },
+        { path: "/salesreport/delivery", label: "Delivery" },
+        { path: "/salesreport/sales", label: "Sales" },
+        { path: "/salesreport/Transaction", label: "Transaction History" },
+      ],
+    },
+    {
+      label: "Transactions",
+      dropdown: [
+        { path: "/Transaction/storage-transaction", label: "Add Item" },
+        { path: "/Transaction/menulist-transaction", label: "Add Menu" },
+        { path: "/Transaction/delivery", label: "Add Delivery" },
+      ],
+    },
   ];
 
   return (
@@ -49,30 +62,47 @@ const Navbar = () => {
         <Link to="/dashboard" className="nav-logo">
           DokiDoki
         </Link>
-        
-        <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
+        <ul className={`nav-links ${isMenuOpen ? "active" : ""}`}>
           {navItems.map((item) => (
-            <li key={item.path}>
-              <Link 
-                to={item.path}
-                className={location.pathname === item.path ? 'active' : ''}
-              >
-                {item.label}
-              </Link>
+            <li key={item.label} className="nav-item">
+              {item.dropdown ? (
+                <div className="dropdown">
+                  <button className="dropdown-toggle">{item.label}</button>
+                  <ul className="dropdown-menu">
+                    {item.dropdown.map((subItem) => (
+                      <li key={subItem.path}>
+                        <Link
+                          to={subItem.path}
+                          className={
+                            location.pathname === subItem.path ? "active" : ""
+                          }
+                        >
+                          {subItem.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <Link
+                  to={item.path}
+                  className={location.pathname === item.path ? "active" : ""}
+                >
+                  {item.label}
+                </Link>
+              )}
             </li>
           ))}
+
           <li>
-            <button 
-              onClick={handleLogout}
-              className="logout-btn"
-            >
+            <button onClick={handleLogout} className="logout-btn">
               Logout
             </button>
           </li>
         </ul>
 
-        <button 
-          className={`nav-toggle ${isMenuOpen ? 'active' : ''}`}
+        <button
+          className={`nav-toggle ${isMenuOpen ? "active" : ""}`}
           onClick={toggleMenu}
           aria-label="Toggle navigation"
         >
