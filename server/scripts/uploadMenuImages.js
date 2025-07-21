@@ -1,4 +1,4 @@
-// server/scripts/uploadMenuImages.js
+
 import fs from 'fs';
 import path from 'path';
 import mongoose from 'mongoose';
@@ -9,12 +9,12 @@ dbConnection();
 
 const imageMapping = {
 
-  "Doki Ramen": "dokiramen.jpg",
-  "Miso Ramen": "misoramen.jpg",
-  "Shio Ramen": "shioramen.jpg",
-  "Shoyu Ramen": "shoyuramen.jpg",
-  "Tantanmen Ramen": "tantanramen.jpg",
-  "Tonkotsu Ramen": "tonkotsuramen.jpg"
+  "Doki Ramen": "dokiRamen.jpg",
+  "Miso Ramen": "misoRamen.jpg",
+  "Shio Ramen": "shioRamen.jpg",
+  "Shoyu Ramen": "shoyuRamen.jpg",
+  "Tantanmen Ramen": "tantanmenRamen.jpg",
+  "Tonkotsu Ramen": "tonkotsuRamen.jpg"
 };
 
 
@@ -36,7 +36,6 @@ async function uploadMenuImages() {
     let successCount = 0;
     let errorCount = 0;
     
-    // First, let's see what menu items exist in your database
     console.log('\n🔍 Checking existing menu items...');
     const allMenuItems = await MenuItem.find({}, 'name category');
     console.log('📋 Found menu items:');

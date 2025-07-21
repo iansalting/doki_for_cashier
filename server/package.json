@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "aws-sdk": "^2.1692.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
     "body-parser": "^1.20.3",
@@ -10,6 +11,7 @@
     "jsonwebtoken": "^9.0.2",
     "luxon": "^3.7.1",
     "mongoose": "^8.12.1",
+    "multer": "^2.0.2",
     "pdfkit": "^0.17.1",
     "pg": "^8.14.0",
     "sequelize": "^6.37.6",

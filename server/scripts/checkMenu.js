@@ -1,4 +1,4 @@
-// server/scripts/checkMenuItems.js
+
 import mongoose from 'mongoose';
 import MenuItem from '../model/menuModel.js';
 import dbConnection from "../config/db.js";
