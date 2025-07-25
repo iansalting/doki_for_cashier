@@ -1,0 +1,253 @@
+/* Add Ingredient Component Styles */
+.add-ingredient-container {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  padding: 1.5rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+.add-ingredient-container h2 {
+  color: #111827;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.add-ingredient-container form {
+  max-width: 500px;
+  margin: 0 auto;
+  background: white;
+  padding: 2rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.add-ingredient-container form > div {
+  margin-bottom: 1.5rem;
+}
+
+.add-ingredient-container label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.add-ingredient-container input[type="text"],
+.add-ingredient-container select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  color: #111827;
+  background-color: white;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  box-sizing: border-box;
+}
+
+.add-ingredient-container input[type="text"]:focus,
+.add-ingredient-container select:focus {
+  outline: none;
+  border-color: rgba(255, 97, 0, 1);
+  box-shadow: 0 0 0 3px rgba(255, 97, 0, 0.1);
+}
+
+.add-ingredient-container input[type="text"]:disabled,
+.add-ingredient-container select:disabled {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.add-ingredient-container button[type="submit"] {
+  width: 100%;
+  background-color: rgba(255, 97, 0, 1);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, transform 0.1s ease-in-out;
+  margin-top: 1rem;
+}
+
+.add-ingredient-container button[type="submit"]:hover:not(:disabled) {
+  background-color: rgba(230, 87, 0, 1);
+  transform: translateY(-1px);
+}
+
+.add-ingredient-container button[type="submit"]:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.add-ingredient-container button[type="submit"]:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Success and Error Messages */
+.add-ingredient-container div[style*="color: green"],
+.add-ingredient-container div[style*="color: red"] {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  text-align: center;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.add-ingredient-container div[style*="color: green"] {
+  background-color: #d1fae5;
+  color: #065f46 !important;
+  border: 1px solid #a7f3d0;
+}
+
+.add-ingredient-container div[style*="color: red"] {
+  background-color: #fee2e2;
+  color: #dc2626 !important;
+  border: 1px solid #fca5a5;
+}
+
+/* Loading state animation */
+.add-ingredient-container button[type="submit"]:disabled::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: ingredient-spin 1s linear infinite;
+}
+
+@keyframes ingredient-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+
+/* Tablet styles */
+@media (max-width: 768px) {
+  .add-ingredient-container {
+    padding: 1rem;
+  }
+  
+  .add-ingredient-container h2 {
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .add-ingredient-container form {
+    padding: 1.5rem;
+    margin: 0 1rem;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 480px) {
+  .add-ingredient-container {
+    padding: 0.75rem;
+  }
+  
+  .add-ingredient-container h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .add-ingredient-container form {
+    padding: 1rem;
+    margin: 0;
+    border-radius: 0.5rem;
+  }
+  
+  .add-ingredient-container form > div {
+    margin-bottom: 1rem;
+  }
+  
+  .add-ingredient-container input[type="text"],
+  .add-ingredient-container select {
+    padding: 0.625rem;
+    font-size: 0.875rem;
+  }
+  
+  .add-ingredient-container button[type="submit"] {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .add-ingredient-container div[style*="color: green"],
+  .add-ingredient-container div[style*="color: red"] {
+    font-size: 0.875rem;
+    padding: 0.625rem;
+  }
+}
+
+/* Small mobile styles */
+@media (max-width: 320px) {
+  .add-ingredient-container h2 {
+    font-size: 1.25rem;
+  }
+  
+  .add-ingredient-container form {
+    padding: 0.75rem;
+  }
+  
+  .add-ingredient-container input[type="text"],
+  .add-ingredient-container select,
+  .add-ingredient-container button[type="submit"] {
+    font-size: 0.8rem;
+  }
+}
+
+/* Focus accessibility improvements */
+.add-ingredient-container input[type="text"]:focus-visible,
+.add-ingredient-container select:focus-visible,
+.add-ingredient-container button[type="submit"]:focus-visible {
+  outline: 2px solid rgba(255, 97, 0, 1);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .add-ingredient-container form {
+    border: 2px solid #000;
+  }
+  
+  .add-ingredient-container input[type="text"],
+  .add-ingredient-container select {
+    border: 2px solid #000;
+  }
+  
+  .add-ingredient-container button[type="submit"] {
+    border: 2px solid #000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .add-ingredient-container input[type="text"],
+  .add-ingredient-container select,
+  .add-ingredient-container button[type="submit"] {
+    transition: none;
+  }
+  
+  .add-ingredient-container button[type="submit"]:hover:not(:disabled) {
+    transform: none;
+  }
+  
+  @keyframes ingredient-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(0deg); }
+  }
+}

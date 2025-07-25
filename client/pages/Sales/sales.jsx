@@ -125,10 +125,10 @@ const Sales = () => {
         <div className="sales-tooltip">
           <p className="font-semibold">{label}</p>
           <p>Category: {data.category}</p>
-          <p>Price: ${data.itemPrice}</p>
+          <p>Price: ₱{data.itemPrice}</p>
           <p>Qty Sold: {data.totalQuantitySold}</p>
           <p>
-            Total Revenue: $
+            Total Revenue: ₱
             {data.totalRevenue ? data.totalRevenue.toFixed(2) : "N/A"}
           </p>
         </div>
@@ -151,13 +151,13 @@ const Sales = () => {
         <div className="sales-summary-cards">
           <div className="sales-card total">
             <h3>Total Sales</h3>
-            <p>${dailySales.data.overall.totalSales.toFixed(2)}</p>
+            <p>₱{dailySales.data.overall.totalSales.toFixed(2)}</p>
             <span>{dailySales.data.overall.totalOrders} Orders</span>
           </div>
           <div className="sales-card online">
             <h3>Online (Users)</h3>
             <p>
-              $
+              ₱
               {dailySales.data.userOrders
                 .reduce((sum, u) => sum + u.totalSales, 0)
                 .toFixed(2)}
@@ -173,7 +173,7 @@ const Sales = () => {
           <div className="sales-card cashier">
             <h3>Cashier (Tables)</h3>
             <p>
-              $
+              ₱
               {dailySales.data.cashierOrders
                 .reduce((sum, c) => sum + c.totalSales, 0)
                 .toFixed(2)}

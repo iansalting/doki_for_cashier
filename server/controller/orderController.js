@@ -30,11 +30,15 @@ const addOrder = async (req, res, next) => {
     for (const item of items) {
       const menuItem = menuItems.find((m) => m._id.equals(item.menuItem));
       if (!menuItem) {
-        return next(createHttpError(404, `Menu item ${item.menuItem} not found`));
+        return next(
+          createHttpError(404, `Menu item ${item.menuItem} not found`)
+        );
       }
 
       if (!menuItem.available) {
-        return next(createHttpError(400, `Menu item "${menuItem.name}" is not available`));
+        return next(
+          createHttpError(400, `Menu item "${menuItem.name}" is not available`)
+        );
       }
 
       // Resolve size or default to 'Classic'
@@ -47,7 +51,14 @@ const addOrder = async (req, res, next) => {
           : menuItem.sizes.find((s) => s.label === "Classic");
 
         if (!selectedSize) {
-          return next(createHttpError(400, `Size "${item.selectedSize || "Classic"}" not available for ${menuItem.name}`));
+          return next(
+            createHttpError(
+              400,
+              `Size "${item.selectedSize || "Classic"}" not available for ${
+                menuItem.name
+              }`
+            )
+          );
         }
 
         itemPrice = selectedSize.price;
@@ -60,7 +71,8 @@ const addOrder = async (req, res, next) => {
         return next(createHttpError(400, `Invalid price for ${menuItem.name}`));
       }
 
-      const usedIngredients = selectedSize?.ingredients || menuItem.ingredients || [];
+      const usedIngredients =
+        selectedSize?.ingredients || menuItem.ingredients || [];
 
       // Check ingredient availability
       for (const ingredient of usedIngredients) {
@@ -68,18 +80,23 @@ const addOrder = async (req, res, next) => {
         if (!ingredientData) continue;
 
         const requiredAmount = ingredient.quantity * item.quantity;
-        const available = ingredientData.stockQuantity !== undefined 
-          ? ingredientData.stockQuantity 
-          : ingredientData.quantity || 0;
+        const available =
+          ingredientData.stockQuantity !== undefined
+            ? ingredientData.stockQuantity
+            : ingredientData.quantity || 0;
 
         if (available < requiredAmount) {
-          return next(createHttpError(400, 
-            `Insufficient "${ingredientData.name}" for ${item.quantity}x ${menuItem.name}. Required: ${requiredAmount}, Available: ${available}`
-          ));
+          return next(
+            createHttpError(
+              400,
+              `Insufficient "${ingredientData.name}" for ${item.quantity}x ${menuItem.name}. Required: ${requiredAmount}, Available: ${available}`
+            )
+          );
         }
 
         const ingredientId = ingredientData._id.toString();
-        ingredientUpdate[ingredientId] = (ingredientUpdate[ingredientId] || 0) + requiredAmount;
+        ingredientUpdate[ingredientId] =
+          (ingredientUpdate[ingredientId] || 0) + requiredAmount;
       }
 
       subtotal += itemPrice * item.quantity;
@@ -93,18 +110,29 @@ const addOrder = async (req, res, next) => {
     }
 
     // Calculate tax and total
-    const taxRate = 0.08; // 8% tax
-    const taxAmount = parseFloat((subtotal * taxRate).toFixed(2));
-    const totalWithTax = parseFloat((subtotal + taxAmount).toFixed(2));
+    const taxRate = 0; // no tax
+    const taxAmount = 0;
+    const totalWithTax = subtotal;
+
+    const existingPendingOrder = await Order.findOne({
+      tableNumber,
+      status: "pending",
+    });
+
+    if (existingPendingOrder) {
+      return next(
+        createHttpError(400, `Table ${tableNumber} already has a pending order`)
+      );
+    }
 
     const newOrder = new Order({
       tableNumber,
       status: "pending",
       orderDate: new Date(),
-      bills: { 
+      bills: {
         total: subtotal,
         tax: taxAmount,
-        totalWithTax: totalWithTax
+        totalWithTax: totalWithTax,
       },
       payment: "cash",
       items: orderItems,
@@ -117,12 +145,12 @@ const addOrder = async (req, res, next) => {
       async ([ingredientId, requiredAmount]) => {
         try {
           const updatedIngredient = await Ingredient.findOneAndUpdate(
-            { 
+            {
               _id: ingredientId,
               $or: [
                 { stockQuantity: { $gte: requiredAmount } },
-                { quantity: { $gte: requiredAmount } }
-              ]
+                { quantity: { $gte: requiredAmount } },
+              ],
             },
             [
               {
@@ -131,24 +159,26 @@ const addOrder = async (req, res, next) => {
                     $cond: {
                       if: { $ne: ["$stockQuantity", null] },
                       then: { $subtract: ["$stockQuantity", requiredAmount] },
-                      else: "$stockQuantity"
-                    }
+                      else: "$stockQuantity",
+                    },
                   },
                   quantity: {
                     $cond: {
                       if: { $eq: ["$stockQuantity", null] },
                       then: { $subtract: ["$quantity", requiredAmount] },
-                      else: "$quantity"
-                    }
-                  }
-                }
-              }
+                      else: "$quantity",
+                    },
+                  },
+                },
+              },
             ],
             { new: true }
           );
 
           if (!updatedIngredient) {
-            throw new Error(`Failed to update ingredient - insufficient stock during update`);
+            throw new Error(
+              `Failed to update ingredient - insufficient stock during update`
+            );
           }
 
           return updatedIngredient;
@@ -163,7 +193,7 @@ const addOrder = async (req, res, next) => {
 
     const populatedOrder = await Order.findById(newOrder._id).populate({
       path: "items.menuItem",
-      select: "name description category"
+      select: "name description category",
     });
 
     // Emit socket event
@@ -173,7 +203,7 @@ const addOrder = async (req, res, next) => {
       status: newOrder.status,
       total: totalWithTax,
       itemCount: orderItems.length,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     // Create receipt data
@@ -183,7 +213,7 @@ const addOrder = async (req, res, next) => {
       tableNumber: populatedOrder.tableNumber,
       orderDate: populatedOrder.orderDate,
       status: populatedOrder.status,
-      items: populatedOrder.items.map(item => {
+      items: populatedOrder.items.map((item) => {
         return {
           name: item.menuItem.name,
           size: item.selectedSize,
@@ -196,23 +226,24 @@ const addOrder = async (req, res, next) => {
         subtotal: subtotal,
         tax: taxAmount,
         totalWithTax: totalWithTax,
-        taxRate: (taxRate * 100).toFixed(0) + '%'
+        taxRate: (taxRate * 100).toFixed(0) + "%",
       },
       payment: "Cash",
       store: {
         name: "DOKI DOKI Ramen House",
-        address: "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
+        address:
+          "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
         phone: "+63 912 345 6789",
         email: "info@dokidokiramen.ph",
         tin: "123-456-789-000",
-        businessPermit: "BP-2024-001234"
+        businessPermit: "BP-2024-001234",
       },
     };
 
     res.status(201).json({
       success: true,
       message: "Order created successfully",
-      data: receiptDetails
+      data: receiptDetails,
     });
   } catch (error) {
     console.error("Error in addOrder:", error);
@@ -230,7 +261,7 @@ const generateReceiptPDF = async (req, res, next) => {
 
     const order = await Order.findById(orderId).populate({
       path: "items.menuItem",
-      select: "name description category"
+      select: "name description category",
     });
 
     if (!order) {
@@ -256,11 +287,12 @@ const generateReceiptPDF = async (req, res, next) => {
     // Store info
     const storeInfo = {
       name: "DOKI DOKI Ramen House",
-      address: "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
+      address:
+        "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
       phone: "+63 912 345 6789",
       email: "info@dokidokiramen.ph",
       tin: "TIN: 123-456-789-000",
-      businessPermit: "BP: 2024-001234"
+      businessPermit: "BP: 2024-001234",
     };
 
     // Header
@@ -273,10 +305,18 @@ const generateReceiptPDF = async (req, res, next) => {
     doc.moveDown();
 
     // Order details
-    doc.fontSize(11).text(`Order #: ${order._id.toString().slice(-8).toUpperCase()}`, { align: "left" });
+    doc
+      .fontSize(11)
+      .text(`Order #: ${order._id.toString().slice(-8).toUpperCase()}`, {
+        align: "left",
+      });
     doc.text(`Table: ${order.tableNumber}`, { align: "left" });
-    doc.text(`Date: ${order.orderDate.toLocaleDateString('en-PH')}`, { align: "left" });
-    doc.text(`Time: ${order.orderDate.toLocaleTimeString('en-PH')}`, { align: "left" });
+    doc.text(`Date: ${order.orderDate.toLocaleDateString("en-PH")}`, {
+      align: "left",
+    });
+    doc.text(`Time: ${order.orderDate.toLocaleTimeString("en-PH")}`, {
+      align: "left",
+    });
     doc.text(`Status: ${order.status.toUpperCase()}`, { align: "left" });
     doc.text(`Payment: CASH`, { align: "left" });
     doc.text("-----------------------------------", { align: "center" });
@@ -293,37 +333,53 @@ const generateReceiptPDF = async (req, res, next) => {
     // Items
     order.items.forEach((item) => {
       const unitPrice = item.price / item.quantity;
-      
+
       // Item name and size
-      const itemText = item.selectedSize && item.selectedSize !== 'Classic' 
-        ? `${item.menuItem.name} (${item.selectedSize})`
-        : item.menuItem.name;
-      
+      const itemText =
+        item.selectedSize && item.selectedSize !== "Classic"
+          ? `${item.menuItem.name} (${item.selectedSize})`
+          : item.menuItem.name;
+
       doc.text(itemText, 10, doc.y, { continued: true, width: 100 });
       doc.text(`${item.quantity}`, 110, doc.y, { continued: true, width: 30 });
-      doc.text(`₱${unitPrice.toFixed(2)}`, 140, doc.y, { continued: true, width: 40 });
-      doc.text(`₱${item.price.toFixed(2)}`, 180, doc.y, { width: 40, align: "right" });
+      doc.text(`₱${unitPrice.toFixed(2)}`, 140, doc.y, {
+        continued: true,
+        width: 40,
+      });
+      doc.text(`₱${item.price.toFixed(2)}`, 180, doc.y, {
+        width: 40,
+        align: "right",
+      });
       doc.moveDown(0.3);
     });
 
     // Totals
     doc.text("-----------------------------------", { align: "center" });
     doc.moveDown(0.3);
-    
+
     // Subtotal
     doc.text("Subtotal:", 120, doc.y, { continued: true, width: 60 });
-    doc.text(`₱${order.bills.total.toFixed(2)}`, 180, doc.y, { width: 40, align: "right" });
-    
+    doc.text(`₱${order.bills.total.toFixed(2)}`, 180, doc.y, {
+      width: 40,
+      align: "right",
+    });
+
     // Tax
     doc.text("Tax (8%):", 120, doc.y, { continued: true, width: 60 });
-    doc.text(`₱${order.bills.tax.toFixed(2)}`, 180, doc.y, { width: 40, align: "right" });
-    
+    doc.text(`₱${order.bills.tax.toFixed(2)}`, 180, doc.y, {
+      width: 40,
+      align: "right",
+    });
+
     doc.text("===================================", { align: "center" });
-    
+
     // Total
     doc.fontSize(12).text("TOTAL:", 120, doc.y, { continued: true, width: 60 });
-    doc.text(`₱${order.bills.totalWithTax.toFixed(2)}`, 180, doc.y, { width: 40, align: "right" });
-    
+    doc.text(`₱${order.bills.totalWithTax.toFixed(2)}`, 180, doc.y, {
+      width: 40,
+      align: "right",
+    });
+
     doc.moveDown();
     doc.fontSize(9);
     doc.text("===================================", { align: "center" });
@@ -334,7 +390,7 @@ const generateReceiptPDF = async (req, res, next) => {
     doc.text("Please come again!", { align: "center" });
     doc.moveDown();
     doc.text(`Cashier: System`, { align: "center" });
-    doc.text(`${new Date().toLocaleString('en-PH')}`, { align: "center" });
+    doc.text(`${new Date().toLocaleString("en-PH")}`, { align: "center" });
 
     // Finalize PDF
     doc.end();
@@ -354,7 +410,7 @@ const generateESCPOS = async (req, res, next) => {
 
     const order = await Order.findById(orderId).populate({
       path: "items.menuItem",
-      select: "name description category"
+      select: "name description category",
     });
 
     if (!order) {
@@ -364,9 +420,10 @@ const generateESCPOS = async (req, res, next) => {
     // Store info
     const storeInfo = {
       name: "DOKI DOKI Ramen House",
-      address: "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
+      address:
+        "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
       phone: "+63 912 345 6789",
-      tin: "TIN: 123-456-789-000"
+      tin: "TIN: 123-456-789-000",
     };
 
     const commands = [
@@ -382,19 +439,24 @@ const generateESCPOS = async (req, res, next) => {
       "\x1B\x61\x00", // Left align
       `Order #: ${order._id.toString().slice(-8).toUpperCase()}\n`,
       `Table: ${order.tableNumber}\n`,
-      `Date: ${order.orderDate.toLocaleDateString('en-PH')}\n`,
-      `Time: ${order.orderDate.toLocaleTimeString('en-PH')}\n`,
+      `Date: ${order.orderDate.toLocaleDateString("en-PH")}\n`,
+      `Time: ${order.orderDate.toLocaleTimeString("en-PH")}\n`,
       `Status: ${order.status.toUpperCase()}\n`,
       `Payment: CASH\n`,
       "----------------------------------\n",
       ...order.items.map((item) => {
         const unitPrice = item.price / item.quantity;
-        const itemText = item.selectedSize && item.selectedSize !== 'Classic' 
-          ? `${item.menuItem.name} (${item.selectedSize})`
-          : item.menuItem.name;
-        
-        return `${itemText}\n` +
-               `${item.quantity} x ₱${unitPrice.toFixed(2)} = ₱${item.price.toFixed(2)}\n`;
+        const itemText =
+          item.selectedSize && item.selectedSize !== "Classic"
+            ? `${item.menuItem.name} (${item.selectedSize})`
+            : item.menuItem.name;
+
+        return (
+          `${itemText}\n` +
+          `${item.quantity} x ₱${unitPrice.toFixed(2)} = ₱${item.price.toFixed(
+            2
+          )}\n`
+        );
       }),
       "----------------------------------\n",
       `Subtotal: ₱${order.bills.total.toFixed(2)}\n`,
@@ -440,7 +502,7 @@ const getOrderWithReceipt = async (req, res, next) => {
 
     const order = await Order.findById(id).populate({
       path: "items.menuItem",
-      select: "name description category"
+      select: "name description category",
     });
 
     if (!order) {
@@ -464,11 +526,12 @@ const getOrderWithReceipt = async (req, res, next) => {
       payment: "Cash",
       store: {
         name: "DOKI DOKI Ramen House",
-        address: "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
+        address:
+          "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
         phone: "+63 912 345 6789",
         email: "info@dokidokiramen.ph",
         tin: "123-456-789-000",
-        businessPermit: "BP-2024-001234"
+        businessPermit: "BP-2024-001234",
       },
     };
 
@@ -482,36 +545,188 @@ const getOrderWithReceipt = async (req, res, next) => {
   }
 };
 
-const getOrderById = async (req, res, next) => {
-  try {
-    const order = await Order.findById(req.params.id).populate({
-      path: "items.menuItem",
-      select: "name description category"
-    });
-    if (!order) return next(createHttpError(404, "Order not found"));
-
-    res.status(200).json({ success: true, data: order });
-  } catch (error) {
-    next(error);
-  }
-};
-
 const getOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find()
+    const { paymentType, status, tableNumber } = req.query;
+
+    let filter = {};
+
+    // For transaction history, get all relevant statuses from both systems
+    // DOKI-app: "pending", "completed"
+    // DOKIUSER: "pending", "completed", "cancelled"
+    filter.status = { $in: ["pending", "completed"] };
+
+    // Apply specific status filter if provided
+    if (status) {
+      filter.status = status;
+    }
+
+    // Filter by payment type
+    if (paymentType === "cashless") {
+      filter.payment = "cashless";
+      console.log("Applied cashless filter");
+    } else if (paymentType === "cash") {
+      filter.payment = "cash";
+      console.log("Applied cash filter");
+    }
+
+    // Table number filter (only applies to DOKI-app orders)
+    if (tableNumber) {
+      filter.tableNumber = parseInt(tableNumber);
+    }
+
+    console.log("Final filter:", filter);
+    console.log("===================");
+
+    // First get orders without population to avoid schema conflicts
+    const orders = await Order.find(filter)
       .populate({
         path: "items.menuItem",
-        select: "name description category"
+        select: "name description category price",
       })
-      .sort({ orderDate: -1 });
+      .sort({ createdAt: -1 });
 
-    res.status(200).json({ success: true, data: orders });
+    // Now populate users field only for orders that have it (DOKIUSER orders)
+    const populatedOrders = await Promise.all(
+      orders.map(async (order) => {
+        // Check if this order has a users field (DOKIUSER order)
+        if (order.users) {
+          try {
+            await order.populate({
+              path: "users",
+              select: "name email",
+            });
+          } catch (populateError) {
+            console.log("Could not populate users for order:", order._id);
+          }
+        }
+        return order;
+      })
+    );
+
+    // Separate orders by system type for better organization
+    const dokiAppOrders = populatedOrders.filter(
+      (order) => order.tableNumber !== undefined
+    );
+    const dokiUserOrders = populatedOrders.filter(
+      (order) => order.users !== undefined
+    );
+
+    res.status(200).json({
+      success: true,
+      data: populatedOrders,
+      summary: {
+        total: populatedOrders.length,
+        dokiApp: dokiAppOrders.length,
+        dokiUser: dokiUserOrders.length,
+        byStatus: {
+          pending: populatedOrders.filter((o) => o.status === "pending").length,
+          completed: populatedOrders.filter((o) => o.status === "completed")
+            .length,
+        },
+        byPayment: {
+          cash: populatedOrders.filter((o) => o.payment === "cash").length,
+          cashless: populatedOrders.filter((o) => o.payment === "cashless")
+            .length,
+        },
+      },
+      separatedData: {
+        dokiApp: dokiAppOrders,
+        dokiUser: dokiUserOrders,
+      },
+    });
   } catch (error) {
     console.error("Error in getOrders:", error);
     next(error);
   }
 };
 
+// Fixed: Get all transaction history with more detailed filtering
+const getTransactionHistory = async (req, res, next) => {
+  try {
+    const { paymentType, startDate, endDate, systemType } = req.query;
+
+    let filter = {
+      status: { $in: ["pending", "completed"] },
+    };
+
+    // Filter by payment type
+    if (paymentType === "cashless") {
+      filter.payment = "cashless";
+    } else if (paymentType === "cash") {
+      filter.payment = "cash";
+    }
+
+    // Filter by system type
+    if (systemType === "dokiapp") {
+      filter.tableNumber = { $exists: true };
+      filter.users = { $exists: false };
+    } else if (systemType === "dokiuser") {
+      filter.users = { $exists: true };
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    console.log("Transaction history filter:", filter);
+
+    // Get orders without users population first
+    const orders = await Order.find(filter)
+      .populate({
+        path: "items.menuItem",
+        select: "name description category price",
+      })
+      .sort({ createdAt: -1 });
+
+    // Categorize orders safely
+    const categorizedOrders = {
+      dokiApp: orders.filter(
+        (order) => order.tableNumber !== undefined && order.users === undefined
+      ),
+      dokiUser: orders.filter((order) => order.users !== undefined),
+    };
+
+    res.status(200).json({
+      success: true,
+      data: orders,
+      categorized: categorizedOrders,
+      analytics: {
+        totalOrders: orders.length,
+        totalRevenue: orders.reduce(
+          (sum, order) => sum + (order.bills?.totalWithTax || 0),
+          0
+        ),
+        systemBreakdown: {
+          dokiApp: {
+            count: categorizedOrders.dokiApp.length,
+            revenue: categorizedOrders.dokiApp.reduce(
+              (sum, order) => sum + (order.bills?.totalWithTax || 0),
+              0
+            ),
+          },
+          dokiUser: {
+            count: categorizedOrders.dokiUser.length,
+            revenue: categorizedOrders.dokiUser.reduce(
+              (sum, order) => sum + (order.bills?.totalWithTax || 0),
+              0
+            ),
+          },
+        },
+        paymentBreakdown: {
+          cash: orders.filter((o) => o.payment === "cash").length,
+          cashless: orders.filter((o) => o.payment === "cashless").length,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error in getTransactionHistory:", error);
+    next(error);
+  }
+};
 const updateOrder = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -522,7 +737,9 @@ const updateOrder = async (req, res, next) => {
     }
 
     if (!status || !["pending", "completed"].includes(status)) {
-      return res.status(400).json({ message: "Valid status is required (pending or completed)" });
+      return res
+        .status(400)
+        .json({ message: "Valid status is required (pending or completed)" });
     }
 
     const updatedOrder = await Order.findByIdAndUpdate(
@@ -540,7 +757,7 @@ const updateOrder = async (req, res, next) => {
       orderId: updatedOrder._id,
       status: updatedOrder.status,
       tableNumber: updatedOrder.tableNumber,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     res.status(200).json({
@@ -553,26 +770,6 @@ const updateOrder = async (req, res, next) => {
   }
 };
 
-const deleteOrder = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid order ID" });
-    }
-
-    const deletedOrder = await Order.findByIdAndDelete(id);
-    if (!deletedOrder)
-      return res.status(404).json({ message: "Order not found" });
-
-    res
-      .status(200)
-      .json({ success: true, message: "Order deleted successfully" });
-  } catch (error) {
-    next(error);
-  }
-};
-
 const getOrdersByTable = async (req, res) => {
   try {
     const { tableNumber } = req.params;
@@ -580,7 +777,7 @@ const getOrdersByTable = async (req, res) => {
     const orders = await Order.find({ tableNumber })
       .populate({
         path: "items.menuItem",
-        select: "name description category"
+        select: "name description category",
       })
       .sort({ orderDate: -1 });
 
@@ -592,12 +789,11 @@ const getOrdersByTable = async (req, res) => {
 
 export {
   addOrder,
-  getOrderById,
   getOrders,
   updateOrder,
-  deleteOrder,
   getOrdersByTable,
   generateReceiptPDF,
   generateESCPOS,
   getOrderWithReceipt,
+  getTransactionHistory,
 };

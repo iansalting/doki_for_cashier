@@ -1,30 +1,65 @@
-import express from 'express'
+import express from 'express';
 import {
   addOrder,
-  getOrderById,
   getOrders,
   updateOrder,
-  deleteOrder,
   getOrdersByTable,
   generateESCPOS,
   generateReceiptPDF,
+  getOrderWithReceipt,
+  getTransactionHistory
+} from '../controller/orderController.js';
+import verifyToken from '../middlewares/tokenVerification.js';
+import { authorizeRole } from '../middlewares/roleMiddleware.js';
+
+const router = express.Router();
+
+// Apply authentication to all routes
+router.use(verifyToken);
+
+
+router.route('/dashboard')
+  .get(
+    authorizeRole("superadmin", "admin"),
+    getOrders
+  )
+  .post(
+    authorizeRole("superadmin", "admin"),
+    addOrder
+  );
+
+// Update order (Admin or SuperAdmin)
+router.route('/dashboard/:id').patch(
+  authorizeRole("superadmin", "admin"),
+  updateOrder
+);
+
+// Get orders by table (Admin or SuperAdmin)
+router.route('/dashboard/table/:tableNumber').get(
+  authorizeRole("superadmin", "admin"),
+  getOrdersByTable
+);
+
+// Transaction history (Admin or SuperAdmin)
+router.route('/transactions').get(
+  authorizeRole("superadmin", "admin"),
+  getTransactionHistory
+);
+
+// Receipt generation routes (Admin or SuperAdmin can generate receipts)
+router.route('/:orderId/receipt-escpos').get(
+  authorizeRole("superadmin", "admin"),
+  generateESCPOS
+);
+
+router.route('/:orderId/receipt-pdf').get(
+  authorizeRole("superadmin", "admin"),
+  generateReceiptPDF
+);
+
+router.route('/:orderId/receipt-data').get(
+  authorizeRole("superadmin", "admin"),
   getOrderWithReceipt
-} from '../controller/orderController.js'
+);
 
-const router = express.Router()
-
-// Routes for main dashboard
-router.route('/dashboard').get(getOrders)           // GET all orders
-router.route('/dashboard').post(addOrder)           // POST new order
-router.route('/dashboard/:id').get(getOrderById)    // GET order by ID
-router.route('/dashboard/:id').patch(updateOrder)   // PATCH (update) order
-router.route('/dashboard/:id').delete(deleteOrder)  // DELETE order
-
-router.route('/dashboard/table/:tableNumber').get(getOrdersByTable)
-
-// Routes for receipt generation
-router.route('/:orderId/receipt-escpos').get(generateESCPOS)
-router.route('/:orderId/receipt-pdf').get(generateReceiptPDF)
-router.route('/:orderId/receipt-data').get(getOrderWithReceipt)
-
-export default router
+export default router;

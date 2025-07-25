@@ -3,46 +3,71 @@ import Menu from "../model/menuModel.js";
 import createHttpError from "http-errors";
 
 const getAllMenu = async (req, res, next) => {
+  const startTime = Date.now();
+  console.log("🚀 Starting getAllMenu...");
   try {
-    // Add query options for filtering and pagination if needed
-    const { category, available } = req.query;
-    
+    res.set({
+      "Cache-Control": "no-store",
+      Pragma: "no-cache",
+      Expires: "0",
+      Vary: "Accept-Encoding, Authorization",
+    });
+
+    const { category, available, showUnavailable } = req.query;
+
     // Build query filter
     let filter = {};
     if (category) {
       filter.category = category;
     }
     if (available !== undefined) {
-      filter.available = available === 'true';
+      filter.available = available === "true";
     }
 
+    console.log("📊 Database query starting...");
+    const dbStartTime = Date.now();
+
+    // Optimize database query with lean() and selective field loading
     const menus = await Menu.find(filter)
-      .populate("sizes.ingredients.ingredient")
-      .sort({ category: 1, name: 1 }); // Sort by category, then name
+      .populate({
+        path: "sizes.ingredients.ingredient",
+        select: "name quantity unit", // Only select needed fields for better performance
+      })
+      .select("-__v") // Exclude version field
+      .lean() // Return plain JavaScript objects for better performance
+      .sort({ category: 1, name: 1 });
+
+    console.log(`📊 Database query completed in: ${Date.now() - dbStartTime}ms`);
 
     if (!menus || menus.length === 0) {
+      console.log(`✅ getAllMenu completed (empty) in: ${Date.now() - startTime}ms`);
       return res.status(200).json({
         success: true,
         data: [],
         categories: [],
-        message: "No menu items found"
+        message: "No menu items found",
       });
     }
 
+    console.log("🔄 Processing menus...");
+    const processingStartTime = Date.now();
+
     const categoriesSet = new Set();
 
+    // Process menus with optimized async handling
     const menusWithAvailability = await Promise.all(
       menus.map(async (menu) => {
-        const menuObj = menu.toObject();
+        // Since we're using lean(), menu is already a plain object
 
         // Collect category
-        if (menuObj.category) {
-          categoriesSet.add(menuObj.category);
+        if (menu.category) {
+          categoriesSet.add(menu.category);
         }
 
-        const sizesWithAvailability = Array.isArray(menuObj.sizes)
+        // Process sizes with availability check
+        const sizesWithAvailability = Array.isArray(menu.sizes)
           ? await Promise.all(
-              menuObj.sizes.map(async (size) => {
+              menu.sizes.map(async (size) => {
                 let isAvailable = true;
                 const unavailableIngredients = [];
 
@@ -59,7 +84,7 @@ const getAllMenu = async (req, res, next) => {
                         reason: "Ingredient not found in inventory",
                       });
                     } else if (
-                      typeof ingredient.quantity === 'number' && 
+                      typeof ingredient.quantity === "number" &&
                       ingredient.quantity < requiredQuantity
                     ) {
                       isAvailable = false;
@@ -67,7 +92,7 @@ const getAllMenu = async (req, res, next) => {
                         name: ingredient.name,
                         required: requiredQuantity,
                         available: ingredient.quantity,
-                        unit: ingredient.unit || 'units',
+                        unit: ingredient.unit || "units",
                         reason:
                           ingredient.quantity === 0
                             ? "Out of stock"
@@ -86,86 +111,118 @@ const getAllMenu = async (req, res, next) => {
                     unavailableIngredients.length > 0
                       ? unavailableIngredients
                       : undefined,
-                  ingredients: size.ingredients || [], // Ensure it's always an array
+                  ingredients: size.ingredients || [],
                 };
               })
             )
           : [];
 
-        // Calculate basePrice - prefer Classic, fall back to first available
+        // Calculate basePrice - prefer Classic, fall back to lowest price
         let basePrice = null;
         const classic = sizesWithAvailability.find(
           (s) => s.label === "Classic"
         );
-        
+
         if (classic) {
           basePrice = classic.price;
         } else if (sizesWithAvailability.length > 0) {
-          // Get the lowest price as base price
-          basePrice = Math.min(...sizesWithAvailability.map(s => s.price));
+          basePrice = Math.min(...sizesWithAvailability.map((s) => s.price));
         }
 
         // Menu is available if it's marked as available AND has at least one available size
-        const isMenuAvailable = menuObj.available && (
-          sizesWithAvailability.length > 0
+        const isMenuAvailable =
+          menu.available &&
+          (sizesWithAvailability.length > 0
             ? sizesWithAvailability.some((size) => size.isAvailable)
-            : true // If no sizes (like drinks), just use the menu's available flag
-        );
+            : true);
 
-        // ADD IMAGE URL LOGIC HERE
+        // Optimized image URL generation with environment fallback
         let imageUrl = null;
-        if (menuObj.image) {
-          imageUrl = `${req.protocol}://${req.get('host')}/uploads/menu/${menuObj.image}`;
+        if (menu.image) {
+          // Use environment variable if available, otherwise construct from request
+          const baseUrl =
+            process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
+          imageUrl = `${baseUrl}/uploads/menu/${menu.image}`;
         }
 
         return {
-          _id: menuObj._id,
-          name: menuObj.name,
-          description: menuObj.description,
-          category: menuObj.category,
-          available: menuObj.available,
+          _id: menu._id,
+          name: menu.name,
+          description: menu.description,
+          category: menu.category,
+          available: menu.available,
           sizes: sizesWithAvailability,
           isAvailable: isMenuAvailable,
           basePrice,
-          // ADD IMAGE FIELDS TO RESPONSE
-          image: menuObj.image,
-          imageAlt: menuObj.imageAlt,
+          image: menu.image,
+          imageAlt: menu.imageAlt,
           imageUrl: imageUrl,
-          createdAt: menuObj.createdAt,
-          updatedAt: menuObj.updatedAt,
+          createdAt: menu.createdAt,
+          updatedAt: menu.updatedAt,
         };
       })
     );
 
-    // Optional: Filter out unavailable items if requested
-    const finalMenus = req.query.showUnavailable === 'false' 
-      ? menusWithAvailability.filter(menu => menu.isAvailable)
-      : menusWithAvailability;
+    console.log(`🔄 Menu processing completed in: ${Date.now() - processingStartTime}ms`);
+
+    // Filter out unavailable items if requested
+    const finalMenus =
+      showUnavailable === "false"
+        ? menusWithAvailability.filter((menu) => menu.isAvailable)
+        : menusWithAvailability;
+
+    console.log("🔐 Generating ETag...");
+    const etagStartTime = Date.now();
+
+    // TEMPORARILY DISABLED FOR PERFORMANCE TESTING
+    // Generate ETag for better caching (optional, mainly for proxy/CDN)
+    // const crypto = await import("crypto");
+    // const etag = crypto
+    //   .createHash("md5")
+    //   .update(JSON.stringify(finalMenus))
+    //   .digest("hex");
+
+    // res.set("ETag", `"${etag}"`);
+
+    // if (req.headers["if-none-match"] === `"${etag}"`) {
+    //   return res.status(304).end();
+    // }
+
+    console.log(`🔐 ETag generation completed in: ${Date.now() - etagStartTime}ms`);
+
+    // Add performance timing header (optional)
+    res.set("X-Response-Time", `${Date.now() - startTime}ms`);
+
+    console.log(`✅ getAllMenu completed in: ${Date.now() - startTime}ms`);
 
     res.status(200).json({
       success: true,
       data: finalMenus,
-      categories: Array.from(categoriesSet).sort(), // Sort categories alphabetically
+      categories: Array.from(categoriesSet).sort(),
       total: finalMenus.length,
+      // Optional: Add cache info for debugging
+      cache: {
+        // etag: etag, // Disabled for now
+        timestamp: new Date().toISOString(),
+      },
     });
-
   } catch (error) {
-    console.error('Error in getAllMenu:', error);
-    
+    console.error("❌ Error in getAllMenu:", error);
+    console.log(`❌ getAllMenu failed in: ${Date.now() - startTime}ms`);
+
     // Handle specific errors
-    if (error.name === 'CastError') {
+    if (error.name === "CastError") {
       return next(createHttpError(400, "Invalid menu ID format"));
     }
-    
-    if (error.name === 'ValidationError') {
+
+    if (error.name === "ValidationError") {
       return next(createHttpError(400, `Validation error: ${error.message}`));
     }
-    
+
     // Generic server error
     next(createHttpError(500, "Failed to fetch menu items"));
   }
 };
-
 
 const getMenuById = async (req, res, next) => {
   try {
@@ -203,30 +260,41 @@ const addMenu = async (req, res, next) => {
     const { name, description, category, sizes, price, available } = req.body;
 
     // Validate required fields upfront
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return next(createHttpError(400, "Name is required and must be a non-empty string"));
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      return next(
+        createHttpError(400, "Name is required and must be a non-empty string")
+      );
     }
 
-    if (!category || typeof category !== 'string') {
-      return next(createHttpError(400, "Category is required and must be a string"));
+    if (!category || typeof category !== "string") {
+      return next(
+        createHttpError(400, "Category is required and must be a string")
+      );
     }
 
     // Get allowed categories from the model schema
-    const allowedCategories = Menu.schema.path('category').enumValues;
-    
+    const allowedCategories = Menu.schema.path("category").enumValues;
+
     if (!allowedCategories.includes(category)) {
-      return next(createHttpError(400, 
-        `Invalid category "${category}". Allowed categories: ${allowedCategories.join(", ")}`
-      ));
+      return next(
+        createHttpError(
+          400,
+          `Invalid category "${category}". Allowed categories: ${allowedCategories.join(
+            ", "
+          )}`
+        )
+      );
     }
 
     // Check if menu item with same name already exists
-    const existingMenuItem = await Menu.findOne({ 
-      name: name.trim() 
+    const existingMenuItem = await Menu.findOne({
+      name: name.trim(),
     });
-    
+
     if (existingMenuItem) {
-      return next(createHttpError(409, `Menu item with name "${name}" already exists`));
+      return next(
+        createHttpError(409, `Menu item with name "${name}" already exists`)
+      );
     }
 
     let processedSizes = [];
@@ -234,9 +302,12 @@ const addMenu = async (req, res, next) => {
     if (category === "ramen") {
       // Ramen items must have sizes with ingredients
       if (!sizes || !Array.isArray(sizes) || sizes.length === 0) {
-        return next(createHttpError(400, 
-          "At least one size must be provided for ramen items"
-        ));
+        return next(
+          createHttpError(
+            400,
+            "At least one size must be provided for ramen items"
+          )
+        );
       }
 
       // Validate each size for ramen
@@ -244,57 +315,84 @@ const addMenu = async (req, res, next) => {
         const { label, price: sizePrice, ingredients } = size;
 
         // Validate size structure
-        if (!label || typeof label !== 'string') {
-          return next(createHttpError(400, 
-            "Each size must have a valid label"
-          ));
+        if (!label || typeof label !== "string") {
+          return next(
+            createHttpError(400, "Each size must have a valid label")
+          );
         }
 
-        if (!sizePrice || typeof sizePrice !== 'number' || sizePrice <= 0) {
-          return next(createHttpError(400, 
-            `Size "${label}" must have a valid price greater than 0`
-          ));
+        if (!sizePrice || typeof sizePrice !== "number" || sizePrice <= 0) {
+          return next(
+            createHttpError(
+              400,
+              `Size "${label}" must have a valid price greater than 0`
+            )
+          );
         }
 
-        if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
-          return next(createHttpError(400, 
-            `Size "${label}" must have at least one ingredient`
-          ));
+        if (
+          !ingredients ||
+          !Array.isArray(ingredients) ||
+          ingredients.length === 0
+        ) {
+          return next(
+            createHttpError(
+              400,
+              `Size "${label}" must have at least one ingredient`
+            )
+          );
         }
 
         // Get allowed size labels from the model schema
-        const allowedLabels = Menu.schema.path('sizes').schema.path('label').enumValues;
+        const allowedLabels = Menu.schema
+          .path("sizes")
+          .schema.path("label").enumValues;
         if (!allowedLabels.includes(label)) {
-          return next(createHttpError(400, 
-            `Invalid size label "${label}". Allowed labels: ${allowedLabels.join(", ")}`
-          ));
+          return next(
+            createHttpError(
+              400,
+              `Invalid size label "${label}". Allowed labels: ${allowedLabels.join(
+                ", "
+              )}`
+            )
+          );
         }
 
         // Process ingredients for this size
         const processedIngredients = [];
-        
+
         for (const item of ingredients) {
-          if (!item.name || typeof item.name !== 'string') {
-            return next(createHttpError(400, 
-              `Invalid ingredient name in size "${label}"`
-            ));
+          if (!item.name || typeof item.name !== "string") {
+            return next(
+              createHttpError(400, `Invalid ingredient name in size "${label}"`)
+            );
           }
 
-          if (!item.quantity || typeof item.quantity !== 'number' || item.quantity <= 0) {
-            return next(createHttpError(400, 
-              `Invalid quantity for ingredient "${item.name}" in size "${label}"`
-            ));
+          if (
+            !item.quantity ||
+            typeof item.quantity !== "number" ||
+            item.quantity <= 0
+          ) {
+            return next(
+              createHttpError(
+                400,
+                `Invalid quantity for ingredient "${item.name}" in size "${label}"`
+              )
+            );
           }
 
           // Find ingredient in database
-          const foundIngredient = await Ingredient.findOne({ 
-            name: item.name.trim() 
+          const foundIngredient = await Ingredient.findOne({
+            name: item.name.trim(),
           });
-          
+
           if (!foundIngredient) {
-            return next(createHttpError(400, 
-              `Ingredient "${item.name}" not found for size "${label}"`
-            ));
+            return next(
+              createHttpError(
+                400,
+                `Ingredient "${item.name}" not found for size "${label}"`
+              )
+            );
           }
 
           processedIngredients.push({
@@ -309,44 +407,56 @@ const addMenu = async (req, res, next) => {
           ingredients: processedIngredients,
         });
       }
-
     } else {
       // Non-ramen items: single size with price from root level
-      if (!price || typeof price !== 'number' || price <= 0) {
-        return next(createHttpError(400, 
-          "Price is required and must be greater than 0 for non-ramen items"
-        ));
+      if (!price || typeof price !== "number" || price <= 0) {
+        return next(
+          createHttpError(
+            400,
+            "Price is required and must be greater than 0 for non-ramen items"
+          )
+        );
       }
 
       // Process ingredients for non-ramen items if provided
       let processedIngredients = [];
-      
+
       if (sizes && Array.isArray(sizes) && sizes[0] && sizes[0].ingredients) {
         const ingredients = sizes[0].ingredients;
-        
+
         if (Array.isArray(ingredients) && ingredients.length > 0) {
           for (const item of ingredients) {
-            if (!item.name || typeof item.name !== 'string') {
-              return next(createHttpError(400, 
-                "Invalid ingredient name for non-ramen item"
-              ));
+            if (!item.name || typeof item.name !== "string") {
+              return next(
+                createHttpError(
+                  400,
+                  "Invalid ingredient name for non-ramen item"
+                )
+              );
             }
 
-            if (!item.quantity || typeof item.quantity !== 'number' || item.quantity <= 0) {
-              return next(createHttpError(400, 
-                `Invalid quantity for ingredient "${item.name}"`
-              ));
+            if (
+              !item.quantity ||
+              typeof item.quantity !== "number" ||
+              item.quantity <= 0
+            ) {
+              return next(
+                createHttpError(
+                  400,
+                  `Invalid quantity for ingredient "${item.name}"`
+                )
+              );
             }
 
             // Find ingredient in database
-            const foundIngredient = await Ingredient.findOne({ 
-              name: item.name.trim() 
+            const foundIngredient = await Ingredient.findOne({
+              name: item.name.trim(),
             });
-            
+
             if (!foundIngredient) {
-              return next(createHttpError(400, 
-                `Ingredient "${item.name}" not found`
-              ));
+              return next(
+                createHttpError(400, `Ingredient "${item.name}" not found`)
+              );
             }
 
             processedIngredients.push({
@@ -357,20 +467,22 @@ const addMenu = async (req, res, next) => {
         }
       }
 
-      processedSizes = [{
-        price,
-        ingredients: processedIngredients,
-      }];
+      processedSizes = [
+        {
+          price,
+          ingredients: processedIngredients,
+        },
+      ];
     }
 
     // Check for duplicate size labels
-    const sizeLabels = processedSizes.map(size => size.label);
+    const sizeLabels = processedSizes.map((size) => size.label);
     const uniqueLabels = [...new Set(sizeLabels)];
-    
+
     if (sizeLabels.length !== uniqueLabels.length) {
-      return next(createHttpError(400, 
-        "Duplicate size labels are not allowed"
-      ));
+      return next(
+        createHttpError(400, "Duplicate size labels are not allowed")
+      );
     }
 
     // Create the menu item
@@ -386,35 +498,41 @@ const addMenu = async (req, res, next) => {
     const savedMenuItem = await newMenuItem.save();
 
     // Populate the ingredients for response
-    await savedMenuItem.populate('sizes.ingredients.ingredient');
+    await savedMenuItem.populate("sizes.ingredients.ingredient");
 
     // Success response
     res.status(201).json({
       success: true,
       message: "Menu item created successfully",
       data: {
-        menuItem: savedMenuItem
-      }
+        menuItem: savedMenuItem,
+      },
     });
-
   } catch (error) {
     // Handle validation errors
-    if (error.name === 'ValidationError') {
-      const errorMessages = Object.values(error.errors).map(err => err.message);
-      return next(createHttpError(400, `Validation failed: ${errorMessages.join(', ')}`));
+    if (error.name === "ValidationError") {
+      const errorMessages = Object.values(error.errors).map(
+        (err) => err.message
+      );
+      return next(
+        createHttpError(400, `Validation failed: ${errorMessages.join(", ")}`)
+      );
     }
 
     // Handle duplicate key errors (shouldn't happen due to our check, but just in case)
     if (error.code === 11000) {
-      return next(createHttpError(409, "A menu item with this name already exists"));
+      return next(
+        createHttpError(409, "A menu item with this name already exists")
+      );
     }
 
     // Handle any other unexpected errors
-    console.error('Error creating menu item:', error);
-    return next(createHttpError(500, "Internal server error while creating menu item"));
+    console.error("Error creating menu item:", error);
+    return next(
+      createHttpError(500, "Internal server error while creating menu item")
+    );
   }
 };
-
 
 const updateMenu = async (req, res, next) => {
   try {

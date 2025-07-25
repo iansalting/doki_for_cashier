@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import './additem.css'
 
 export default function Ingredient() {
   const [name, setName] = useState("");

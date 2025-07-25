@@ -1,16 +1,14 @@
 import { useState } from "react";
 import IngredientPage from "./ingredientPage.jsx";
-import MenuPage from "./menuPage.jsx";
-import './inventory.css'
+import MenuPage from "./menupage.jsx";
+import './inventory.css';
 
 export default function InventoryAndMenuView() {
-  
   const [selectedPage, setSelectedPage] = useState("ingredients");
 
-
   return (
-    <div className="main-container">
-      <div className="view-selector">
+    <div className="inventory-wrapper">
+      <div className="inventory-view-selector">
         <label htmlFor="page-select">Select View:</label>
         <select
           id="page-select"
@@ -22,7 +20,9 @@ export default function InventoryAndMenuView() {
         </select>
       </div>
 
-      {selectedPage === "ingredients" ? <IngredientPage /> : <MenuPage />}
+      <div className="inventory-page">
+        {selectedPage === "ingredients" ? <IngredientPage /> : <MenuPage />}
+      </div>
     </div>
   );
 }

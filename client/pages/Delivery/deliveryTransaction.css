@@ -1,0 +1,432 @@
+/* Delivery Dashboard Component Styles */
+.delivery-dashboard {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  padding: 1.5rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+.dashboard-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.dashboard-title {
+  color: #111827;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+/* Success and Error Messages */
+.delivery-dashboard div:has(p[style*="color: #065f46"]) {
+  background-color: #d1fae5;
+  border: 1px solid #a7f3d0;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.delivery-dashboard div:has(p[style*="color: #dc2626"]) {
+  background-color: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.delivery-dashboard p[style*="color: #065f46"] {
+  color: #065f46 !important;
+  font-weight: 500;
+  margin: 0;
+}
+
+.delivery-dashboard p[style*="color: #dc2626"] {
+  color: #dc2626 !important;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Section Styling */
+.delivery-dashboard div[style*="backgroundColor: #f9fafb"] {
+  background-color: white !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.75rem !important;
+  padding: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.delivery-dashboard h3 {
+  color: #111827;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 2px solid rgba(255, 97, 0, 1);
+  padding-bottom: 0.5rem;
+}
+
+/* Input Group */
+.input-group {
+  margin-bottom: 1rem;
+}
+
+.input-label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Form Inputs */
+.delivery-dashboard input[type="text"],
+.delivery-dashboard input[type="date"],
+.delivery-dashboard input[type="number"],
+.delivery-dashboard select,
+.delivery-dashboard textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  color: #111827;
+  background-color: white;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  box-sizing: border-box;
+}
+
+.delivery-dashboard input[type="text"]:focus,
+.delivery-dashboard input[type="date"]:focus,
+.delivery-dashboard input[type="number"]:focus,
+.delivery-dashboard select:focus,
+.delivery-dashboard textarea:focus {
+  outline: none;
+  border-color: rgba(255, 97, 0, 1);
+  box-shadow: 0 0 0 3px rgba(255, 97, 0, 0.1);
+}
+
+.delivery-dashboard textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Delivery Items Section */
+.delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type > div:not(:last-child) {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type label:first-child {
+  margin-top: 0;
+}
+
+/* Buttons */
+.delivery-dashboard button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Primary Submit Button */
+.delivery-dashboard > .dashboard-container > button:last-child {
+  background-color: rgba(255, 97, 0, 1);
+  color: white;
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.125rem;
+  margin-top: 1rem;
+}
+
+.delivery-dashboard > .dashboard-container > button:last-child:hover:not(:disabled) {
+  background-color: rgba(230, 87, 0, 1);
+  transform: translateY(-1px);
+}
+
+.delivery-dashboard > .dashboard-container > button:last-child:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Add Another Item Button */
+.delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type > button:last-child {
+  background-color: #10b981;
+  color: white;
+  margin-top: 1rem;
+}
+
+.delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type > button:last-child:hover {
+  background-color: #059669;
+  transform: translateY(-1px);
+}
+
+/* Remove Item Button */
+.delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type > div button {
+  background-color: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+.delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type > div button:hover:not(:disabled) {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+}
+
+.delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type > div button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Loading state animation */
+.delivery-dashboard > .dashboard-container > button:last-child:disabled::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: delivery-spin 1s linear infinite;
+}
+
+@keyframes delivery-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+
+/* Large Desktop */
+@media (min-width: 1200px) {
+  .delivery-dashboard {
+    padding: 2rem;
+  }
+  
+  .dashboard-container {
+    max-width: 1000px;
+  }
+  
+  .delivery-dashboard div[style*="backgroundColor: #f9fafb"] {
+    padding: 2rem !important;
+  }
+}
+
+/* Desktop */
+@media (max-width: 1024px) {
+  .dashboard-title {
+    font-size: 2.25rem;
+  }
+  
+  .delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type > div {
+    padding-right: 6rem;
+  }
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  .delivery-dashboard {
+    padding: 1rem;
+  }
+  
+  .dashboard-title {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .dashboard-container {
+    margin: 0;
+  }
+  
+  .delivery-dashboard div[style*="backgroundColor: #f9fafb"] {
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type > div {
+    padding: 0.75rem;
+    padding-bottom: 3.5rem;
+  }
+  
+  .delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type > div button {
+    position: static;
+    margin-top: 1rem;
+    width: 100%;
+  }
+  
+  .delivery-dashboard h3 {
+    font-size: 1.125rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .delivery-dashboard {
+    padding: 0.75rem;
+  }
+  
+  .dashboard-title {
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  .delivery-dashboard div[style*="backgroundColor: #f9fafb"] {
+    padding: 0.75rem !important;
+    border-radius: 0.5rem !important;
+  }
+  
+  .delivery-dashboard div[style*="backgroundColor: #f9fafb"]:last-of-type > div {
+    padding: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .delivery-dashboard input[type="text"],
+  .delivery-dashboard input[type="date"],
+  .delivery-dashboard input[type="number"],
+  .delivery-dashboard select,
+  .delivery-dashboard textarea {
+    padding: 0.625rem;
+    font-size: 0.875rem;
+  }
+  
+  .delivery-dashboard button {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .delivery-dashboard > .dashboard-container > button:last-child {
+    padding: 0.875rem;
+    font-size: 1rem;
+  }
+  
+  .delivery-dashboard h3 {
+    font-size: 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 320px) {
+  .dashboard-title {
+    font-size: 1.5rem;
+  }
+  
+  .delivery-dashboard div[style*="backgroundColor: #f9fafb"] {
+    padding: 0.5rem !important;
+  }
+  
+  .delivery-dashboard input[type="text"],
+  .delivery-dashboard input[type="date"],
+  .delivery-dashboard input[type="number"],
+  .delivery-dashboard select,
+  .delivery-dashboard textarea {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .delivery-dashboard button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Focus accessibility improvements */
+.delivery-dashboard input[type="text"]:focus-visible,
+.delivery-dashboard input[type="date"]:focus-visible,
+.delivery-dashboard input[type="number"]:focus-visible,
+.delivery-dashboard select:focus-visible,
+.delivery-dashboard textarea:focus-visible,
+.delivery-dashboard button:focus-visible {
+  outline: 2px solid rgba(255, 97, 0, 1);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .delivery-dashboard div[style*="backgroundColor: #f9fafb"] {
+    border: 2px solid #000 !important;
+  }
+  
+  .delivery-dashboard input[type="text"],
+  .delivery-dashboard input[type="date"],
+  .delivery-dashboard input[type="number"],
+  .delivery-dashboard select,
+  .delivery-dashboard textarea {
+    border: 2px solid #000;
+  }
+  
+  .delivery-dashboard button {
+    border: 2px solid #000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .delivery-dashboard input[type="text"],
+  .delivery-dashboard input[type="date"],
+  .delivery-dashboard input[type="number"],
+  .delivery-dashboard select,
+  .delivery-dashboard textarea,
+  .delivery-dashboard button {
+    transition: none;
+  }
+  
+  .delivery-dashboard button:hover:not(:disabled) {
+    transform: none;
+  }
+  
+  @keyframes delivery-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(0deg); }
+  }
+}
+
+/* Print styles */
+@media print {
+  .delivery-dashboard {
+    background-color: white;
+    padding: 0;
+  }
+  
+  .delivery-dashboard button {
+    display: none;
+  }
+  
+  .delivery-dashboard div[style*="backgroundColor: #f9fafb"] {
+    background-color: white !important;
+    border: 1px solid #000 !important;
+  }
+}

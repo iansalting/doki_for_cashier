@@ -61,7 +61,7 @@ const uploadMenuImage = async (req, res) => {
 
   } catch (error) {
     console.error('Image upload error:', error);
-    
+    s
     // Clean up file if error occurred
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);

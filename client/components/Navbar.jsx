@@ -43,7 +43,7 @@ const Navbar = () => {
         { path: "/salesreport/storage", label: "Storage" },
         { path: "/salesreport/delivery", label: "Delivery" },
         { path: "/salesreport/sales", label: "Sales" },
-        { path: "/salesreport/Transaction", label: "Transaction History" },
+        { path: "/salesreport/transactions", label: "Transaction History" },
       ],
     },
     {

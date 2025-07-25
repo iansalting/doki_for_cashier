@@ -15,21 +15,24 @@ export default function Orders() {
   const navigate = useNavigate();
 
   // Notification system
-  const addNotification = useCallback((message, type = 'info', duration = 4000) => {
-    const id = Date.now() + Math.random();
-    const notification = { id, message, type, duration };
-    
-    setNotifications(prev => [...prev, notification]);
-    
-    if (duration > 0) {
-      setTimeout(() => {
-        removeNotification(id);
-      }, duration);
-    }
-  }, []);
+  const addNotification = useCallback(
+    (message, type = "info", duration = 4000) => {
+      const id = Date.now() + Math.random();
+      const notification = { id, message, type, duration };
+
+      setNotifications((prev) => [...prev, notification]);
+
+      if (duration > 0) {
+        setTimeout(() => {
+          removeNotification(id);
+        }, duration);
+      }
+    },
+    []
+  );
 
   const removeNotification = useCallback((id) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
+    setNotifications((prev) => prev.filter((notif) => notif.id !== id));
   }, []);
 
   useEffect(() => {
@@ -42,29 +45,43 @@ export default function Orders() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await axios.get(
+        const token = localStorage.getItem("token");
+        console.log("🔑 Orders token:", token);
+        console.log(
+          "📡 Fetching from:",
           "http://localhost:8000/api/order/dashboard"
         );
-        
+
+        const response = await axios.get(
+          "http://localhost:8000/api/order/dashboard",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
         // Filter to only show pending orders
-        const pendingOrders = response.data.data.filter(order => order.status === "pending");
+        const pendingOrders = response.data.data.filter(
+          (order) => order.status === "pending"
+        );
         setOrders(pendingOrders);
-        
+
         if (pendingOrders.length === 0) {
           addNotification("No pending orders at the moment", "info", 3000);
         }
       } catch (err) {
-        const errorMessage = err.response?.data?.message || err.message || "Failed to fetch orders";
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to fetch orders";
         setError(errorMessage);
         addNotification(errorMessage, "error");
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchOrders();
   }, [addNotification]);
 
@@ -73,16 +90,18 @@ export default function Orders() {
       if (newOrder.status === "pending") {
         setOrders((prevOrders) => [newOrder, ...prevOrders]);
         addNotification(
-          `New order received${newOrder.orderNumber ? ` (#${newOrder.orderNumber})` : ''}!`, 
-          "success", 
+          `New order received${
+            newOrder.orderNumber ? ` (#${newOrder.orderNumber})` : ""
+          }!`,
+          "success",
           5000
         );
       }
     });
 
     socket.on("order-updated", (updatedOrder) => {
-      setOrders((prevOrders) => 
-        prevOrders.map(order => 
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
           order._id === updatedOrder._id ? updatedOrder : order
         )
       );
@@ -98,9 +117,15 @@ export default function Orders() {
     try {
       setUpdatingOrderId(orderId);
 
+      const token = localStorage.getItem("token"); // 🔐 Add this
       const response = await axios.patch(
         `http://localhost:8000/api/order/dashboard/${orderId}`,
-        { status }
+        { status },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // ✅ Add this header
+          },
+        }
       );
 
       const updatedOrder = response.data.data;
@@ -109,8 +134,10 @@ export default function Orders() {
       if (status === "completed" || status === "cancelled") {
         setOrders((prev) => prev.filter((order) => order._id !== orderId));
         addNotification(
-          `Order ${status === "completed" ? "completed" : "cancelled"} successfully!`, 
-          "success", 
+          `Order ${
+            status === "completed" ? "completed" : "cancelled"
+          } successfully!`,
+          "success",
           3000
         );
       } else {
@@ -125,11 +152,11 @@ export default function Orders() {
       socket.emit("order-status-updated", {
         orderId: orderId,
         status: status,
-        updatedOrder: updatedOrder
+        updatedOrder: updatedOrder,
       });
-
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || "Failed to update order";
+      const errorMessage =
+        err.response?.data?.message || err.message || "Failed to update order";
       setError(errorMessage);
       addNotification(errorMessage, "error");
     } finally {
@@ -142,16 +169,29 @@ export default function Orders() {
       await handleUpdateOrder(orderId, "cancelled");
     }
   };
-
   const refreshOrders = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:8000/api/order/dashboard");
-      const pendingOrders = response.data.data.filter(order => order.status === "pending");
+
+      const token = localStorage.getItem("token");
+
+      const response = await axios.get(
+        "http://localhost:8000/api/order/dashboard",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // ✅ Add token here
+          },
+        }
+      );
+
+      const pendingOrders = response.data.data.filter(
+        (order) => order.status === "pending"
+      );
       setOrders(pendingOrders);
       addNotification("Orders refreshed", "success", 2000);
     } catch (err) {
-      const errorMessage = err.response?.data?.message || "Failed to refresh orders";
+      const errorMessage =
+        err.response?.data?.message || "Failed to refresh orders";
       addNotification(errorMessage, "error");
     } finally {
       setLoading(false);
@@ -160,10 +200,12 @@ export default function Orders() {
 
   // Helper function to determine if order is cashless
   const isCashlessOrder = (order) => {
-    return order.paymentMethod === "card" || 
-           order.paymentMethod === "online" || 
-           order.isCashless === true ||
-           (order.customerName && !order.tableNumber);
+    return (
+      order.paymentMethod === "card" ||
+      order.paymentMethod === "online" ||
+      order.isCashless === true ||
+      (order.customerName && !order.tableNumber)
+    );
   };
 
   // Helper function to get display name/identifier
@@ -189,7 +231,6 @@ export default function Orders() {
       <div className="orders-container">
         <div className="loading-spinner">
           <div className="spinner"></div>
-          <p>Loading orders...</p>
         </div>
       </div>
     );
@@ -221,9 +262,11 @@ export default function Orders() {
               onClick={() => removeNotification(notification.id)}
             >
               <div className="notification-content">
-                <span className="notification-message">{notification.message}</span>
+                <span className="notification-message">
+                  {notification.message}
+                </span>
               </div>
-              <button 
+              <button
                 className="notification-close"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -241,11 +284,15 @@ export default function Orders() {
       <div className="orders-header">
         <h1>Pending Orders</h1>
         <div className="orders-actions">
-          <button onClick={refreshOrders} className="refresh-btn" disabled={loading}>
+          <button
+            onClick={refreshOrders}
+            className="refresh-btn"
+            disabled={loading}
+          >
             {loading ? "Refreshing..." : "Refresh"}
           </button>
           <span className="orders-count">
-            {orders.length} order{orders.length !== 1 ? 's' : ''}
+            {orders.length} order{orders.length !== 1 ? "s" : ""}
           </span>
         </div>
       </div>
@@ -270,7 +317,7 @@ export default function Orders() {
                     <span className="order-type dine-in">Dine-in</span>
                   )}
                 </div>
-                
+
                 <div className="order-meta">
                   {order.orderNumber && (
                     <p className="order-number">Order #{order.orderNumber}</p>
@@ -279,7 +326,10 @@ export default function Orders() {
                     {new Date(order.orderDate).toLocaleString()}
                   </p>
                   <p className="order-status">
-                    Status: <span className={`status-${order.status}`}>{order.status}</span>
+                    Status:{" "}
+                    <span className={`status-${order.status}`}>
+                      {order.status}
+                    </span>
                   </p>
                   <p className="order-total">
                     Total: <strong>{formatOrderTotal(order)}</strong>
@@ -294,12 +344,17 @@ export default function Orders() {
                     order.items.map((item, index) => (
                       <div key={index} className="order-item">
                         <div className="item-info">
-                          <strong>{item?.menuItem?.name || "Unknown Item"}</strong>
+                          <strong>
+                            {item?.menuItem?.name || "Unknown Item"}
+                          </strong>
                           <span className="item-details">
-                            Size: {item.selectedSize || "Standard"} • Qty: {item?.quantity || 0}
+                            Size: {item.selectedSize || "Standard"} • Qty:{" "}
+                            {item?.quantity || 0}
                           </span>
                           {item.unitPrice && (
-                            <span className="item-price">₱{item.unitPrice.toFixed(2)} each</span>
+                            <span className="item-price">
+                              ₱{item.unitPrice.toFixed(2)} each
+                            </span>
                           )}
                         </div>
                         <div className="item-total">
@@ -323,18 +378,22 @@ export default function Orders() {
                     disabled={updatingOrderId === order._id}
                     className="btn-complete"
                   >
-                    {updatingOrderId === order._id ? "Completing..." : "Complete Order"}
+                    {updatingOrderId === order._id
+                      ? "Completing..."
+                      : "Complete Order"}
                   </button>
-                  
+
                   <button
                     onClick={() => handleCancelOrder(order._id)}
                     disabled={updatingOrderId === order._id}
                     className="btn-cancel"
                   >
-                    {updatingOrderId === order._id ? "Cancelling..." : "Cancel Order"}
+                    {updatingOrderId === order._id
+                      ? "Cancelling..."
+                      : "Cancel Order"}
                   </button>
                 </div>
-                
+
                 {isCashlessOrder(order) && order.customerEmail && (
                   <div className="customer-info">
                     <small>Customer: {order.customerEmail}</small>

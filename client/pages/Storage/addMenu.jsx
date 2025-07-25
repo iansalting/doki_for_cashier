@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import './addmenu.css'
 
 export default function MenuPage() {
   const [ingredients, setIngredients] = useState([]);
@@ -287,7 +288,6 @@ export default function MenuPage() {
     return <div>Redirecting to login...</div>;
   }
 
-
   return (
     <div className="menu-container">
       <h1>Menu Management</h1>
@@ -347,27 +347,11 @@ export default function MenuPage() {
         {formData.category && formData.category !== "ramen" && (
           <div className="ingredient-section">
             <h3>Ingredients (Optional)</h3>
-            
-            {/* DEBUG INFO */}
-            <div style={{
-              background: '#f0f0f0', 
-              padding: '10px', 
-              margin: '10px 0', 
-              border: '1px solid #ccc',
-              borderRadius: '4px'
-            }}>
-              <strong>🔍 Debug Info:</strong><br/>
-              Selected Ingredient ID: {nonRamenIngredientInput.selectedIngredient}<br/>
-              Quantity: {nonRamenIngredientInput.quantity}<br/>
-              Total Ingredients in State: {nonRamenIngredients.length}<br/>
-              Available Ingredients Loaded: {ingredients.length}
-            </div>
 
             <div className="ingredient-inputs">
               <select
                 value={nonRamenIngredientInput.selectedIngredient}
                 onChange={(e) => {
-                  console.log("🔄 Ingredient selection changed to:", e.target.value);
                   setNonRamenIngredientInput({
                     ...nonRamenIngredientInput, 
                     selectedIngredient: e.target.value
@@ -392,7 +376,6 @@ export default function MenuPage() {
                 min="0.01"
                 step="0.01"
                 onChange={(e) => {
-                  console.log("🔄 Quantity changed to:", e.target.value);
                   setNonRamenIngredientInput({
                     ...nonRamenIngredientInput, 
                     quantity: e.target.value

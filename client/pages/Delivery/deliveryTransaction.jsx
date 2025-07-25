@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Calendar, Plus, Trash2, Package, User, MapPin } from "lucide-react";
 import axios from "axios";
-
+import "./deliveryTransaction.css";
 
 const DeliveryDashboard = () => {
   const [ingredients, setIngredients] = useState([]);
@@ -22,9 +22,12 @@ const DeliveryDashboard = () => {
   const fetchIngredients = async () => {
     const token = localStorage.getItem("token");
     try {
-      const response = await axios.get("http://localhost:8000/api/ingredients/", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "http://localhost:8000/api/ingredients/",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       const ingredientsData = response.data.data || response.data;
       setIngredients(ingredientsData);
     } catch {
@@ -100,12 +103,16 @@ const DeliveryDashboard = () => {
       );
 
       setFormSuccess(response.data.message || "Delivery added successfully!");
+
       setFormData({
         supplier: "",
         deliveryDate: "",
         notes: "",
         items: [{ ingredient: "", quantity: 0 }],
       });
+
+      // ✅ Refresh ingredient list to reflect updated stock
+      fetchIngredients();
     } catch (err) {
       setFormError(err.response?.data?.message || "Failed to add delivery");
     } finally {
@@ -130,8 +137,22 @@ const DeliveryDashboard = () => {
           </div>
         )}
 
-        <div style={{ backgroundColor: "#f9fafb", padding: "20px", borderRadius: "8px", marginBottom: "20px" }}>
-          <h3 style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+        <div
+          style={{
+            backgroundColor: "#f9fafb",
+            padding: "20px",
+            borderRadius: "8px",
+            marginBottom: "20px",
+          }}
+        >
+          <h3
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "16px",
+            }}
+          >
             <MapPin size={16} />
             Delivery Information
           </h3>
@@ -171,7 +192,14 @@ const DeliveryDashboard = () => {
           </div>
         </div>
 
-        <div style={{ backgroundColor: "#f9fafb", padding: "20px", borderRadius: "8px", marginBottom: "20px" }}>
+        <div
+          style={{
+            backgroundColor: "#f9fafb",
+            padding: "20px",
+            borderRadius: "8px",
+            marginBottom: "20px",
+          }}
+        >
           <h3>
             <Package size={16} />
             Delivery Items
@@ -182,7 +210,9 @@ const DeliveryDashboard = () => {
               <label>Ingredient *</label>
               <select
                 value={item.ingredient || ""}
-                onChange={(e) => handleItemChange(index, "ingredient", e.target.value)}
+                onChange={(e) =>
+                  handleItemChange(index, "ingredient", e.target.value)
+                }
                 required
               >
                 <option value="">Select ingredient...</option>
@@ -191,7 +221,8 @@ const DeliveryDashboard = () => {
                   if (!ingredientId) return null;
                   return (
                     <option key={ingredientId} value={ingredientId}>
-                      {ingredient.name} (Current: {ingredient.quantity || 0} {ingredient.unit || "units"})
+                      {ingredient.name} (Current: {ingredient.quantity || 0}{" "}
+                      {ingredient.unit || "units"})
                     </option>
                   );
                 })}
@@ -201,13 +232,18 @@ const DeliveryDashboard = () => {
               <input
                 type="number"
                 value={item.quantity}
-                onChange={(e) => handleItemChange(index, "quantity", e.target.value)}
+                onChange={(e) =>
+                  handleItemChange(index, "quantity", e.target.value)
+                }
                 min="0.01"
                 step="0.01"
                 required
               />
 
-              <button onClick={() => removeItem(index)} disabled={formData.items.length === 1}>
+              <button
+                onClick={() => removeItem(index)}
+                disabled={formData.items.length === 1}
+              >
                 Remove
               </button>
             </div>

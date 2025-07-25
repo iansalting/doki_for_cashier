@@ -1,0 +1,451 @@
+/* Menu Management Component Styles */
+.menu-container {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  padding: 1.5rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+.menu-container h1 {
+  color: #111827;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+/* Form Container */
+.menu-form {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  padding: 2rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.menu-form h2 {
+  color: #111827;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid rgba(255, 97, 0, 1);
+  padding-bottom: 0.5rem;
+}
+
+.menu-form h3 {
+  color: #374151;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1.5rem 0 1rem 0;
+}
+
+.menu-form h4 {
+  color: #4b5563;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+}
+
+/* Form Row */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Form Inputs */
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  color: #111827;
+  background-color: white;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: rgba(255, 97, 0, 1);
+  box-shadow: 0 0 0 3px rgba(255, 97, 0, 0.1);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Button Styles */
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: rgba(255, 97, 0, 1);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: rgba(230, 87, 0, 1);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: #6b7280;
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #4b5563;
+  transform: translateY(-1px);
+}
+
+.btn-success {
+  background-color: #10b981;
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #059669;
+  transform: translateY(-1px);
+}
+
+.btn-info {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.btn-info:hover:not(:disabled) {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background-color: #ef4444;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+}
+
+.btn-small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  min-width: auto;
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.125rem;
+  margin-top: 2rem;
+}
+
+/* Sections */
+.ingredient-section,
+.ramen-sizes {
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+  border: 1px solid #e9ecef;
+}
+
+/* Input Groups */
+.ingredient-inputs,
+.size-inputs {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+/* Lists */
+.ingredients-list,
+.size-ingredients,
+.added-sizes {
+  margin-top: 1rem;
+}
+
+.ingredients-list ul,
+.size-ingredients ul,
+.added-sizes ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ingredient-item,
+.size-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+}
+
+.ingredient-item span,
+.size-item span {
+  flex: 1;
+  color: #374151;
+}
+
+/* Debug Info Styling */
+.menu-form div[style*="background: #f0f0f0"] {
+  background-color: #fef3c7 !important;
+  border: 1px solid #f59e0b !important;
+  border-radius: 0.5rem !important;
+  padding: 1rem !important;
+  margin: 1rem 0 !important;
+  font-size: 0.875rem;
+  color: #92400e;
+}
+
+/* Responsive Design */
+
+/* Large Desktop */
+@media (min-width: 1200px) {
+  .menu-container {
+    padding: 2rem;
+  }
+  
+  .menu-form {
+    max-width: 1000px;
+    padding: 2.5rem;
+  }
+}
+
+/* Desktop */
+@media (max-width: 1024px) {
+  .menu-container h1 {
+    font-size: 2.25rem;
+  }
+  
+  .ingredient-inputs,
+  .size-inputs {
+    grid-template-columns: 1fr 1fr auto;
+  }
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  .menu-container {
+    padding: 1rem;
+  }
+  
+  .menu-container h1 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .menu-form {
+    padding: 1.5rem;
+    margin: 0;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  
+  .ingredient-inputs,
+  .size-inputs {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .ingredient-section,
+  .ramen-sizes {
+    padding: 1rem;
+  }
+  
+  .ingredient-item,
+  .size-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .ingredient-item .btn,
+  .size-item .btn {
+    align-self: flex-end;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .menu-container {
+    padding: 0.75rem;
+  }
+  
+  .menu-container h1 {
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  .menu-form {
+    padding: 1rem;
+    border-radius: 0.5rem;
+  }
+  
+  .menu-form h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  
+  .menu-form h3 {
+    font-size: 1.125rem;
+    margin: 1rem 0 0.75rem 0;
+  }
+  
+  .form-input,
+  .form-select,
+  .form-textarea {
+    padding: 0.625rem;
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .btn {
+    padding: 0.625rem 1rem;
+    font-size: 0.8rem;
+  }
+  
+  .btn-submit {
+    padding: 0.875rem;
+    font-size: 1rem;
+    margin-top: 1.5rem;
+  }
+  
+  .ingredient-section,
+  .ramen-sizes {
+    padding: 0.75rem;
+    margin: 1rem 0;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 320px) {
+  .menu-container h1 {
+    font-size: 1.5rem;
+  }
+  
+  .menu-form {
+    padding: 0.75rem;
+  }
+  
+  .menu-form h2 {
+    font-size: 1.125rem;
+  }
+  
+  .form-input,
+  .form-select,
+  .form-textarea {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .ingredient-item span,
+  .size-item span {
+    font-size: 0.875rem;
+  }
+}
+
+/* Focus accessibility improvements */
+.form-input:focus-visible,
+.form-select:focus-visible,
+.form-textarea:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid rgba(255, 97, 0, 1);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .menu-form {
+    border: 2px solid #000;
+  }
+  
+  .form-input,
+  .form-select,
+  .form-textarea {
+    border: 2px solid #000;
+  }
+  
+  .btn {
+    border: 2px solid #000;
+  }
+  
+  .ingredient-item,
+  .size-item {
+    border: 2px solid #000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .form-input,
+  .form-select,
+  .form-textarea,
+  .btn {
+    transition: none;
+  }
+  
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .menu-container {
+    background-color: white;
+    padding: 0;
+  }
+  
+  .btn {
+    display: none;
+  }
+  
+  .ingredient-section,
+  .ramen-sizes {
+    background-color: white;
+    border: 1px solid #000;
+  }
+}

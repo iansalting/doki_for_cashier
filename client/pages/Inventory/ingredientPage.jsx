@@ -25,6 +25,13 @@ export default function Ingredient() {
 
   const [deleteLoading, setDeleteLoading] = useState(null);
 
+  // Toast notification state
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    type: "success", // 'success', 'error', 'warning', 'info'
+  });
+
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -34,6 +41,14 @@ export default function Ingredient() {
     ml: "Milliliters",
     l: "Liters",
     pcs: "Pieces",
+  };
+
+  // Toast notification function
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 4000);
   };
 
   useEffect(() => {
@@ -46,11 +61,14 @@ export default function Ingredient() {
     try {
       setLoading(true);
       setError("");
-      const response = await axios.get("http://localhost:8000/api/ingredients/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.get(
+        "http://localhost:8000/api/ingredients/",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       setIngredients(response.data);
     } catch (error) {
       setError(error.response?.data?.message || error.message);
@@ -99,19 +117,27 @@ export default function Ingredient() {
         }
       );
 
-      if (authResponse.data.success) {
-        await performDelete();
-      } else {
-        alert(
-          authResponse.data.message || "Invalid password. Please try again."
-        );
+      const { success, message, role } = authResponse.data;
+
+      if (!success) {
+        showToast(message || "Invalid password. Please try again.", "error");
         setAuthModal((prev) => ({ ...prev, loading: false }));
+        return;
       }
+
+      if (role !== "superadmin") {
+        showToast("Only superadmins are allowed to delete ingredients.", "warning");
+        navigate("/salesreport/storage");
+        return;
+      }
+
+      await performDelete();
     } catch (err) {
       const errorMessage =
         err.response?.data?.message ||
         "Authentication failed. Please check your password.";
-      alert(errorMessage);
+      showToast(errorMessage, "error");
+    } finally {
       setAuthModal((prev) => ({ ...prev, loading: false }));
     }
   };
@@ -125,14 +151,19 @@ export default function Ingredient() {
         return;
       }
 
-      await axios.delete(`http://localhost:8000/api/ingredients/delete/${ingredientId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await axios.delete(
+        `http://localhost:8000/api/ingredients/delete/${ingredientId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      setIngredients((prev) => prev.filter((ingredient) => ingredient.id !== ingredientId));
-      alert("Ingredient deleted successfully!");
+      setIngredients((prev) =>
+        prev.filter((ingredient) => ingredient.id !== ingredientId)
+      );
+      showToast("Ingredient deleted successfully!", "success");
 
       setAuthModal({
         show: false,
@@ -143,7 +174,7 @@ export default function Ingredient() {
       });
       setDeleteModal({ show: false, ingredientId: null, ingredientName: "" });
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to delete ingredient");
+      showToast(err.response?.data?.message || "Failed to delete ingredient", "error");
     } finally {
       setDeleteLoading(null);
     }
@@ -169,6 +200,27 @@ export default function Ingredient() {
 
   return (
     <div className="ingredients-container">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast toast-${toast.type}`}>
+          <div className="toast-content">
+            <span className="toast-icon">
+              {toast.type === "success" && "✅"}
+              {toast.type === "error" && "❌"}
+              {toast.type === "warning" && "⚠️"}
+              {toast.type === "info" && "ℹ️"}
+            </span>
+            <span className="toast-message">{toast.message}</span>
+            <button 
+              className="toast-close" 
+              onClick={() => setToast({ show: false, message: "", type: "success" })}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="container-1">
         <h1>Storage</h1>
 
@@ -181,24 +233,30 @@ export default function Ingredient() {
         />
 
         {!filteredIngredients || filteredIngredients.length === 0 ? (
-          <p>No matching ingredients found</p>
+          <p className="no-ingredients">No matching ingredients found</p>
         ) : (
           <ul className="ingredients-list">
             {filteredIngredients.map((ingredient) => (
               <li key={ingredient.id} className="ingredient-item">
                 <div className="ingredient-header">
                   <h2>{ingredient.name}</h2>
-                  <button
-                    className="btn-delete"
-                    onClick={() => handleDeleteClick(ingredient.id, ingredient.name)}
-                    disabled={deleteLoading === ingredient.id}
-                    title="Delete ingredient"
-                  >
-                    {deleteLoading === ingredient.id ? "..." : "🗑️"}
-                  </button>
+                  <div className="ingredient-info">
+                    <p className="quantity">Qty: {ingredient.quantity}</p>
+                    <p className="unit">
+                      {unitLabels[ingredient.unit] || ingredient.unit}
+                    </p>
+                  </div>
                 </div>
-                <p>Quantity: {ingredient.quantity}</p>
-                <p>Unit: {unitLabels[ingredient.unit] || ingredient.unit}</p>
+                <button
+                  className="btn-delete"
+                  onClick={() =>
+                    handleDeleteClick(ingredient.id, ingredient.name)
+                  }
+                  disabled={deleteLoading === ingredient.id}
+                  title="Delete ingredient"
+                >
+                  {deleteLoading === ingredient.id ? "..." : "🗑️"}
+                </button>
               </li>
             ))}
           </ul>
