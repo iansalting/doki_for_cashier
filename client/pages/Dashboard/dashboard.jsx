@@ -1319,7 +1319,7 @@ export default function Dashboard() {
             <p>
               <strong>Reason:</strong> Missing or insufficient ingredients
             </p>
-          </div>no changes added to commit (use "git add" and/or "git commit -a")
+          </div>
           <div className="ingredient-list">
             <h3>Ingredient Requirements:</h3>
             {getUnavailableIngredients(
