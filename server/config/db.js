@@ -8,6 +8,7 @@ dotenv.config();
 const dbConnection = async () => {
   try {
     const conn = await mongoose.connect(config.databaseURI);
+    console.log("======DB", config.databaseURI)
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
