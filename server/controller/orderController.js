@@ -11,37 +11,50 @@ const addOrder = async (req, res, next) => {
     const { tableNumber, items } = req.body;
 
     if (!items || items.length === 0) {
-      return next(createHttpError(400, "Order must contain at least one item"));
+      return res.status(400).json({
+        success: false,
+        message: "Order must contain at least one item",
+      });
     }
 
     if (!tableNumber) {
-      return next(createHttpError(400, "Table number is required"));
+      return res.status(400).json({
+        success: false,
+        message: "Table number is required",
+      });
     }
 
     let subtotal = 0;
-    const ingredientUpdate = {};
+    const ingredientConsumption = {};
 
+    // Fetch menu items with populated ingredients
     const menuItems = await Menu.find({
       _id: { $in: items.map((item) => item.menuItem) },
     }).populate("sizes.ingredients.ingredient");
 
     const orderItems = [];
 
+    // Process each item and calculate ingredient requirements
     for (const item of items) {
-      const menuItem = menuItems.find((m) => m._id.equals(item.menuItem));
+      const menuItem = menuItems.find(
+        (m) => m._id.toString() === item.menuItem.toString()
+      );
+
       if (!menuItem) {
-        return next(
-          createHttpError(404, `Menu item ${item.menuItem} not found`)
-        );
+        return res.status(404).json({
+          success: false,
+          message: `Menu item ${item.menuItem} not found`,
+        });
       }
 
       if (!menuItem.available) {
-        return next(
-          createHttpError(400, `Menu item "${menuItem.name}" is not available`)
-        );
+        return res.status(400).json({
+          success: false,
+          message: `Menu item "${menuItem.name}" is not available`,
+        });
       }
 
-      // Resolve size or default to 'Classic'
+      // Handle sizes
       let selectedSize = null;
       let itemPrice = 0;
 
@@ -51,52 +64,39 @@ const addOrder = async (req, res, next) => {
           : menuItem.sizes.find((s) => s.label === "Classic");
 
         if (!selectedSize) {
-          return next(
-            createHttpError(
-              400,
-              `Size "${item.selectedSize || "Classic"}" not available for ${
-                menuItem.name
-              }`
-            )
-          );
+          return res.status(400).json({
+            success: false,
+            message: `Size "${
+              item.selectedSize || "Classic"
+            }" not available for ${menuItem.name}`,
+          });
         }
 
         itemPrice = selectedSize.price;
       } else {
-        // Fallback for items without sizes (shouldn't happen with your system)
         itemPrice = menuItem.basePrice || menuItem.price || 0;
       }
 
       if (itemPrice <= 0) {
-        return next(createHttpError(400, `Invalid price for ${menuItem.name}`));
+        return res.status(400).json({
+          success: false,
+          message: `Invalid price for ${menuItem.name}`,
+        });
       }
 
+      // Process ingredients
       const usedIngredients =
         selectedSize?.ingredients || menuItem.ingredients || [];
 
-      // Check ingredient availability
       for (const ingredient of usedIngredients) {
         const ingredientData = ingredient.ingredient;
         if (!ingredientData) continue;
 
         const requiredAmount = ingredient.quantity * item.quantity;
-        const available =
-          ingredientData.stockQuantity !== undefined
-            ? ingredientData.stockQuantity
-            : ingredientData.quantity || 0;
-
-        if (available < requiredAmount) {
-          return next(
-            createHttpError(
-              400,
-              `Insufficient "${ingredientData.name}" for ${item.quantity}x ${menuItem.name}. Required: ${requiredAmount}, Available: ${available}`
-            )
-          );
-        }
-
         const ingredientId = ingredientData._id.toString();
-        ingredientUpdate[ingredientId] =
-          (ingredientUpdate[ingredientId] || 0) + requiredAmount;
+
+        ingredientConsumption[ingredientId] =
+          (ingredientConsumption[ingredientId] || 0) + requiredAmount;
       }
 
       subtotal += itemPrice * item.quantity;
@@ -105,149 +105,157 @@ const addOrder = async (req, res, next) => {
         menuItem: item.menuItem,
         selectedSize: selectedSize?.label || "Classic",
         quantity: item.quantity,
-        price: itemPrice * item.quantity, // Total price for this item
+        price: itemPrice * item.quantity,
       });
     }
 
-    // Calculate tax and total
-    const taxRate = 0; // no tax
-    const taxAmount = 0;
-    const totalWithTax = subtotal;
+    // Check ingredient availability BEFORE consuming anything
+    console.log("🔍 Checking ingredient availability...");
+    for (const [ingredientId, requiredAmount] of Object.entries(
+      ingredientConsumption
+    )) {
+      const ingredient = await Ingredient.findById(ingredientId);
 
+      if (!ingredient) {
+        return res.status(404).json({
+          success: false,
+          message: `Ingredient not found`,
+        });
+      }
+
+      const totalAvailable = ingredient.batches.reduce(
+        (sum, batch) => sum + batch.quantity,
+        0
+      );
+
+      if (totalAvailable < requiredAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient "${ingredient.name}" available. Required: ${requiredAmount}${ingredient.unit}, Available: ${totalAvailable}${ingredient.unit}`,
+        });
+      }
+    }
+
+    // Check for existing pending order
     const existingPendingOrder = await Order.findOne({
       tableNumber,
       status: "pending",
     });
 
     if (existingPendingOrder) {
-      return next(
-        createHttpError(400, `Table ${tableNumber} already has a pending order`)
-      );
+      return res.status(400).json({
+        success: false,
+        message: `Table ${tableNumber} already has a pending order`,
+      });
     }
 
+    // STEP 1: Consume ingredients FIRST (critical step that might fail)
+    console.log("🔄 Consuming ingredients...");
+    const consumptionResults = [];
+    const consumedIngredients = [];
+
+    try {
+      for (const [ingredientId, requiredAmount] of Object.entries(
+        ingredientConsumption
+      )) {
+        const ingredient = await Ingredient.findById(ingredientId);
+
+        // Store original state for potential rollback
+        const originalBatches = ingredient.batches.map((batch) => ({
+          _id: batch._id,
+          quantity: batch.quantity,
+          expirationDate: batch.expirationDate,
+          deliveryId: batch.deliveryId,
+          addedDate: batch.addedDate,
+        }));
+
+        // Use the consume method from your schema
+        const result = await ingredient.consume(requiredAmount);
+
+        consumedIngredients.push({
+          ingredient,
+          originalBatches,
+          consumed: requiredAmount - result.remainingUnfulfilled,
+        });
+
+        consumptionResults.push({
+          ingredientName: ingredient.name,
+          consumed: requiredAmount - result.remainingUnfulfilled,
+          remainingTotal: result.totalQuantity,
+          unfulfilled: result.remainingUnfulfilled,
+        });
+
+        console.log(
+          `✅ Consumed ${requiredAmount - result.remainingUnfulfilled}${
+            ingredient.unit
+          } of ${ingredient.name}. Remaining: ${result.totalQuantity}${
+            ingredient.unit
+          }`
+        );
+
+        if (result.remainingUnfulfilled > 0) {
+          throw new Error(
+            `Could not fulfill ${result.remainingUnfulfilled}${ingredient.unit} of ${ingredient.name}`
+          );
+        }
+      }
+    } catch (ingredientError) {
+      // Rollback consumed ingredients manually
+      console.log("🔄 Rolling back ingredient consumption...");
+      for (const consumedData of consumedIngredients) {
+        try {
+          consumedData.ingredient.batches = consumedData.originalBatches;
+          await consumedData.ingredient.save();
+          console.log(`↩️ Rolled back ${consumedData.ingredient.name}`);
+        } catch (rollbackError) {
+          console.error(
+            `❌ Failed to rollback ${consumedData.ingredient.name}:`,
+            rollbackError
+          );
+        }
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: `Failed to update ingredient stock: ${ingredientError.message}`,
+      });
+    }
+
+    console.log("💾 Creating order after successful ingredient consumption...");
     const newOrder = new Order({
       tableNumber,
       status: "pending",
       orderDate: new Date(),
       bills: {
         total: subtotal,
-        tax: taxAmount,
-        totalWithTax: totalWithTax,
+        tax: 0,
+        totalWithTax: subtotal,
       },
       payment: "cash",
       items: orderItems,
     });
-
     await newOrder.save();
-
-    // Update ingredient stock atomically
-    const ingredientUpdatePromises = Object.entries(ingredientUpdate).map(
-      async ([ingredientId, requiredAmount]) => {
-        try {
-          const updatedIngredient = await Ingredient.findOneAndUpdate(
-            {
-              _id: ingredientId,
-              $or: [
-                { stockQuantity: { $gte: requiredAmount } },
-                { quantity: { $gte: requiredAmount } },
-              ],
-            },
-            [
-              {
-                $set: {
-                  stockQuantity: {
-                    $cond: {
-                      if: { $ne: ["$stockQuantity", null] },
-                      then: { $subtract: ["$stockQuantity", requiredAmount] },
-                      else: "$stockQuantity",
-                    },
-                  },
-                  quantity: {
-                    $cond: {
-                      if: { $eq: ["$stockQuantity", null] },
-                      then: { $subtract: ["$quantity", requiredAmount] },
-                      else: "$quantity",
-                    },
-                  },
-                },
-              },
-            ],
-            { new: true }
-          );
-
-          if (!updatedIngredient) {
-            throw new Error(
-              `Failed to update ingredient - insufficient stock during update`
-            );
-          }
-
-          return updatedIngredient;
-        } catch (err) {
-          console.error(`Failed to update ingredient ${ingredientId}:`, err);
-          throw new Error(`Failed to update ingredient stock`);
-        }
-      }
-    );
-
-    await Promise.all(ingredientUpdatePromises);
-
-    const populatedOrder = await Order.findById(newOrder._id).populate({
+    await newOrder.populate({
       path: "items.menuItem",
       select: "name description category",
     });
 
-    // Emit socket event
-    getIO().emit("new-order", {
-      orderId: newOrder._id,
-      tableNumber: newOrder.tableNumber,
-      status: newOrder.status,
-      total: totalWithTax,
-      itemCount: orderItems.length,
-      timestamp: new Date(),
-    });
-
-    // Create receipt data
-    const receiptDetails = {
-      orderId: populatedOrder._id,
-      orderNumber: populatedOrder._id.toString().slice(-8).toUpperCase(),
-      tableNumber: populatedOrder.tableNumber,
-      orderDate: populatedOrder.orderDate,
-      status: populatedOrder.status,
-      items: populatedOrder.items.map((item) => {
-        return {
-          name: item.menuItem.name,
-          size: item.selectedSize,
-          quantity: item.quantity,
-          unitPrice: item.price / item.quantity,
-          subtotal: item.price,
-        };
-      }),
-      bills: {
-        subtotal: subtotal,
-        tax: taxAmount,
-        totalWithTax: totalWithTax,
-        taxRate: (taxRate * 100).toFixed(0) + "%",
-      },
-      payment: "Cash",
-      store: {
-        name: "DOKI DOKI Ramen House",
-        address:
-          "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
-        phone: "+63 912 345 6789",
-        email: "info@dokidokiramen.ph",
-        tin: "123-456-789-000",
-        businessPermit: "BP-2024-001234",
-      },
-    };
+    await newOrder.save();
+    console.log("🎉 Order completed successfully!");
 
     res.status(201).json({
       success: true,
       message: "Order created successfully",
-      data: receiptDetails,
+      order: newOrder,
+      ingredientConsumption: consumptionResults,
     });
   } catch (error) {
-    console.error("Error in addOrder:", error);
-    next(error);
+    console.error("💥 Error creating order:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create order",
+    });
   }
 };
 
@@ -365,7 +373,7 @@ const generateReceiptPDF = async (req, res, next) => {
     });
 
     // Tax
-    doc.text("Tax (8%):", 120, doc.y, { continued: true, width: 60 });
+    doc.text("Tax (0%):", 120, doc.y, { continued: true, width: 60 });
     doc.text(`₱${order.bills.tax.toFixed(2)}`, 180, doc.y, {
       width: 40,
       align: "right",
@@ -460,7 +468,7 @@ const generateESCPOS = async (req, res, next) => {
       }),
       "----------------------------------\n",
       `Subtotal: ₱${order.bills.total.toFixed(2)}\n`,
-      `Tax (8%): ₱${order.bills.tax.toFixed(2)}\n`,
+      `Tax (0%): ₱${order.bills.tax.toFixed(2)}\n`,
       "==================================\n",
       "\x1B\x45\x01", // Bold
       "\x1B\x61\x01", // Center align

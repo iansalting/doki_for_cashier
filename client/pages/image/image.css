@@ -1,0 +1,162 @@
+.image-upload-container {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+}
+
+.image-upload-container h2 {
+  color: #333;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.image-upload-container select {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  background-color: #fff;
+  transition: border-color 0.3s ease;
+}
+
+.image-upload-container select:focus {
+  outline: none;
+  border-color: rgb(255, 97, 0);
+  box-shadow: 0 0 5px rgba(255, 97, 0, 0.3);
+}
+
+.image-upload-container .image-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.image-upload-container img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.image-upload-container input[type="file"] {
+  width: 100%;
+  padding: 0.5rem;
+  margin: 1rem 0;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.image-upload-container .button-container {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.image-upload-container button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  font-weight: 500;
+}
+
+.image-upload-container button.upload-button {
+  background-color: rgb(255, 97, 0);
+  color: #fff;
+}
+
+.image-upload-container button.upload-button:hover {
+  background-color: rgb(230, 87, 0);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.image-upload-container button.upload-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.image-upload-container button.delete-button {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.image-upload-container button.delete-button:hover {
+  background-color: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.image-upload-container button.delete-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.image-upload-container p {
+  margin: 1rem 0;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.image-upload-container p[style*="color: green"] {
+  color: #28a745;
+}
+
+.image-upload-container p[style*="color: red"] {
+  color: #dc3545;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .image-upload-container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+
+  .image-upload-container h2 {
+    font-size: 1.25rem;
+  }
+
+  .image-upload-container select,
+  .image-upload-container input[type="file"],
+  .image-upload-container button {
+    font-size: 0.9rem;
+    padding: 0.5rem;
+  }
+
+  .image-upload-container img {
+    max-width: 100%;
+  }
+
+  .image-upload-container .button-container {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .image-upload-container {
+    margin: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .image-upload-container h2 {
+    font-size: 1.1rem;
+  }
+
+  .image-upload-container button {
+    width: 100%;
+    padding: 0.75rem;
+  }
+}

@@ -1,44 +1,32 @@
 // routes/imageRoutes.js
-import express from 'express';
-import { uploadSingle, handleMulterError } from '../middlewares/imageUpload.js';
+import express from "express";
 import {
-  uploadMenuImage,
-  deleteMenuImage,
-  getImageStatus,
-  bulkUploadImages
-} from '../controller/imageUploadController.js';
-import verifyToken from '../middlewares/tokenVerification.js';
-import { authorizeRole } from '../middlewares/roleMiddleware.js';
+  uploadMenuItemImage,
+  getMenuItemImage,
+  deleteMenuItemImage,
+  getAllMenuItems,
+  getMenuItemById,
+} from "../controller/imageUploadController.js";
+import verifyToken from "../middlewares/tokenVerification.js";
+import { authorizeRole } from "../middlewares/roleMiddleware.js";
 
 const router = express.Router();
 
 // Apply authentication to all image routes
 router.use(verifyToken);
 
-// POST - Upload single menu image (Admin or SuperAdmin)
-router.post('/menu/:menuId/upload-image',
-  authorizeRole("superadmin", "admin"),
-  uploadSingle,
-  handleMulterError,
-  uploadMenuImage
-);
+router
+  .route("/menu-items/:menuItemId/image")
+  .post(verifyToken, authorizeRole("superadmin"), uploadMenuItemImage);
 
-// DELETE - Delete menu image (Admin or SuperAdmin)
-router.delete('/menu/:menuId/image',
-  authorizeRole("superadmin", "admin"),
-  deleteMenuImage
-);
+router
+  .route("/menu-items/:menuItemId/image")
+  .delete(verifyToken, authorizeRole("superadmin"), deleteMenuItemImage);
 
-// POST - Bulk upload images (Admin or SuperAdmin)
-router.post('/bulk-upload-images',
-  authorizeRole("superadmin", "admin"),
-  bulkUploadImages
-);
+router
+  .route("/menu-items/:menuItemId/image")
+  .get(verifyToken, authorizeRole("superadmin"), getMenuItemImage);
 
-// GET - Get image status (Admin or SuperAdmin - for monitoring)
-router.get('/image-status',
-  authorizeRole("superadmin", "admin"),
-  getImageStatus
-);
-
+router.route('/menu-items').get(verifyToken, authorizeRole("superadmin"),getAllMenuItems)
+router.route('/menu-items/:id').get(verifyToken, authorizeRole("superadmin"),getMenuItemById)
 export default router;

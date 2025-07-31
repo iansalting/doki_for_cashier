@@ -123,7 +123,7 @@ export default function Orders() {
         { status },
         {
           headers: {
-            Authorization: `Bearer ${token}`, // ✅ Add this header
+            Authorization: `Bearer ${token}`, 
           },
         }
       );
@@ -164,11 +164,6 @@ export default function Orders() {
     }
   };
 
-  const handleCancelOrder = async (orderId) => {
-    if (window.confirm("Are you sure you want to cancel this order?")) {
-      await handleUpdateOrder(orderId, "cancelled");
-    }
-  };
   const refreshOrders = async () => {
     try {
       setLoading(true);
@@ -381,16 +376,6 @@ export default function Orders() {
                     {updatingOrderId === order._id
                       ? "Completing..."
                       : "Complete Order"}
-                  </button>
-
-                  <button
-                    onClick={() => handleCancelOrder(order._id)}
-                    disabled={updatingOrderId === order._id}
-                    className="btn-cancel"
-                  >
-                    {updatingOrderId === order._id
-                      ? "Cancelling..."
-                      : "Cancel Order"}
                   </button>
                 </div>
 

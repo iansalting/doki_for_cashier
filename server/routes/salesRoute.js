@@ -2,7 +2,8 @@ import express from 'express';
 import { 
   getTopSales, 
   getDailySales, 
-  getMonthlySales 
+  getMonthlySales,
+  generateSalesSummaryExcel
 } from '../controller/salesControler.js';
 import verifyToken from '../middlewares/tokenVerification.js';
 import { authorizeRole } from '../middlewares/roleMiddleware.js';
@@ -21,5 +22,7 @@ router.route('/daily').get(getDailySales);
 
 // GET - Monthly sales report (SuperAdmin only)
 router.route('/monthly').get(getMonthlySales);
+
+router.route('/sales-summary').get(generateSalesSummaryExcel);
 
 export default router;

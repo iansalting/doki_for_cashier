@@ -1,6 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  memo,
+} from "react";
 import axios from "axios";
 import "./dashboard.css";
+import ErrorBoundary from "./errorBoundery";
 
 // 🚀 OPTIMIZED COMPONENTS
 
@@ -33,270 +41,290 @@ const Toast = memo(({ message, type, onClose, duration = 4000 }) => {
 });
 
 // Optimized Image Component
-const LazyImage = memo(({ src, alt, className, onError, placeholder = "🍜" }) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const imgRef = useRef(null);
+export const LazyImage = memo(
+  ({ src, alt, className, onError, placeholder = "🍜" }) => {
+    const [imageLoaded, setImageLoaded] = useState(false);
+    const [imageError, setImageError] = useState(false);
+    const imgRef = useRef(null);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && imgRef.current && !imageLoaded && !imageError) {
-          const img = new Image();
-          img.onload = () => setImageLoaded(true);
-          img.onerror = () => {
-            setImageError(true);
-            if (onError) onError();
-          };
-          img.src = src;
-        }
-      },
-      { threshold: 0.1, rootMargin: "50px" }
-    );
+    useEffect(() => {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (
+            entry.isIntersecting &&
+            imgRef.current &&
+            !imageLoaded &&
+            !imageError
+          ) {
+            const img = new Image();
+            img.onload = () => setImageLoaded(true);
+            img.onerror = () => {
+              setImageError(true);
+              if (onError) onError();
+            };
+            img.src = src;
+          }
+        },
+        { threshold: 0.1, rootMargin: "50px" }
+      );
 
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
-    }
-
-    return () => {
       if (imgRef.current) {
-        observer.unobserve(imgRef.current);
+        observer.observe(imgRef.current);
       }
-    };
-  }, [src, imageLoaded, imageError, onError]);
 
-  return (
-    <div ref={imgRef} className={className}>
-      {!imageLoaded && !imageError && (
-        <div className="image-loading-placeholder">
-          <div className="loading-spinner"></div>
-          <span>{placeholder}</span>
-        </div>
-      )}
-      {imageLoaded && (
-        <img
-          src={src}
-          alt={alt}
-          className="menu-image"
-          style={{
-            opacity: imageLoaded ? 1 : 0,
-            transition: "opacity 0.3s ease",
-          }}
-        />
-      )}
-      {imageError && (
-        <div className="menu-image-placeholder">
-          <span className="image-placeholder-icon">{placeholder}</span>
-          <p>No Image</p>
-        </div>
-      )}
-    </div>
-  );
-});
+      return () => {
+        if (imgRef.current) {
+          observer.unobserve(imgRef.current);
+        }
+      };
+    }, [src, imageLoaded, imageError, onError]);
 
-// Memoized Modal Components
-const CustomModal = memo(({ isOpen, onClose, title, children, size = "medium" }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className={`custom-modal ${size}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-header">
-          <h3>{title}</h3>
-          <button className="close-modal" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        <div className="modal-body">{children}</div>
-      </div>
-    </div>
-  );
-});
-
-const CustomInputModal = memo(({
-  isOpen,
-  onClose,
-  title,
-  label,
-  placeholder,
-  onConfirm,
-  inputType = "text",
-}) => {
-  const [value, setValue] = useState("");
-
-  const handleSubmit = useCallback(() => {
-    if (value.trim()) {
-      onConfirm(value);
-      setValue("");
-      onClose();
-    }
-  }, [value, onConfirm, onClose]);
-
-  const handleKeyPress = useCallback((e) => {
-    if (e.key === "Enter") {
-      handleSubmit();
-    }
-  }, [handleSubmit]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="custom-modal small" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>{title}</h3>
-          <button className="close-modal" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        <div className="modal-body">
-          <label>{label}</label>
-          <input
-            type={inputType}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder={placeholder}
-            onKeyPress={handleKeyPress}
-            autoFocus
-            className="modal-input"
-          />
-          <div className="modal-actions">
-            <button className="button-secondary" onClick={onClose}>
-              Cancel
-            </button>
-            <button
-              className="button-primary"
-              onClick={handleSubmit}
-              disabled={!value.trim()}
-            >
-              Confirm
-            </button>
+    return (
+      <div ref={imgRef} className={className}>
+        {!imageLoaded && !imageError && (
+          <div className="image-loading-placeholder">
+            <div className="loading-spinner"></div>
+            <span>{placeholder}</span>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-// 🎯 MEMOIZED MENU CARD COMPONENT
-const MenuCard = memo(({ 
-  menu, 
-  isMenuOutOfStock, 
-  isMenuAvailable, 
-  isRamenCategory, 
-  onAddDirectToCart, 
-  onOpenSizeModal, 
-  onViewIngredientDetails 
-}) => {
-  const handleImageError = useCallback((e) => {
-    e.target.src = "/default-menu-image.jpg";
-    e.target.alt = "Menu item image not available";
-  }, []);
-
-  return (
-    <div
-      className={`menu-card ${isMenuOutOfStock(menu) ? "unavailable" : ""}`}
-    >
-      {/* Image Section */}
-      <div className="menu-card-image">
-        {menu.imageUrl ? (
-          <LazyImage
-            src={menu.imageUrl}
-            alt={menu.imageAlt || menu.name}
-            className="menu-card-image"
-            onError={handleImageError}
-            placeholder="🍜"
+        )}
+        {imageLoaded && (
+          <img
+            src={src}
+            alt={alt}
+            className="menu-image"
+            style={{
+              opacity: imageLoaded ? 1 : 0,
+              transition: "opacity 0.3s ease",
+            }}
           />
-        ) : (
+        )}
+        {imageError && (
           <div className="menu-image-placeholder">
-            <span className="image-placeholder-icon">🍜</span>
+            <span className="image-placeholder-icon">{placeholder}</span>
             <p>No Image</p>
           </div>
         )}
       </div>
+    );
+  }
+);
 
-      <div className="menu-card-content">
-        <div className="menu-card-header">
-          <h3>{menu.name}</h3>
-          <div className="availability-controls">
-            {isMenuAvailable(menu) ? (
-              <span className="status in">Available</span>
-            ) : (
-              <>
-                <span className="status out">Out of stock</span>
-                <button
-                  className="ingredient-details-btn"
-                  onClick={() => onViewIngredientDetails(menu)}
-                  title="View ingredient details"
-                >
-                  ⓘ
-                </button>
-              </>
-            )}
+// Memoized Modal Components
+const CustomModal = memo(
+  ({ isOpen, onClose, title, children, size = "medium" }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div
+          className={`custom-modal ${size}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="modal-header">
+            <h3>{title}</h3>
+            <button className="close-modal" onClick={onClose}>
+              ×
+            </button>
+          </div>
+          <div className="modal-body">{children}</div>
+        </div>
+      </div>
+    );
+  }
+);
+
+const CustomInputModal = memo(
+  ({
+    isOpen,
+    onClose,
+    title,
+    label,
+    placeholder,
+    onConfirm,
+    inputType = "text",
+  }) => {
+    const [value, setValue] = useState("");
+
+    const handleSubmit = useCallback(() => {
+      if (value.trim()) {
+        onConfirm(value);
+        setValue("");
+        onClose();
+      }
+    }, [value, onConfirm, onClose]);
+
+    const handleKeyPress = useCallback(
+      (e) => {
+        if (e.key === "Enter") {
+          handleSubmit();
+        }
+      },
+      [handleSubmit]
+    );
+
+    if (!isOpen) return null;
+
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div
+          className="custom-modal small"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="modal-header">
+            <h3>{title}</h3>
+            <button className="close-modal" onClick={onClose}>
+              ×
+            </button>
+          </div>
+          <div className="modal-body">
+            <label>{label}</label>
+            <input
+              type={inputType}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder={placeholder}
+              onKeyPress={handleKeyPress}
+              autoFocus
+              className="modal-input"
+            />
+            <div className="modal-actions">
+              <button className="button-secondary" onClick={onClose}>
+                Cancel
+              </button>
+              <button
+                className="button-primary"
+                onClick={handleSubmit}
+                disabled={!value.trim()}
+              >
+                Confirm
+              </button>
+            </div>
           </div>
         </div>
-
-        {menu.description && (
-          <p className="menu-description">{menu.description}</p>
-        )}
-
-        {isRamenCategory(menu) ? (
-          <>
-            {menu.sizes && menu.sizes.length > 0 && (
-              <div className="size-preview">
-                <p className="size-count">
-                  {menu.sizes.length} size{menu.sizes.length > 1 ? "s" : ""} available
-                </p>
-                <div className="size-price-range">
-                  {menu.sizes.length === 1 ? (
-                    <span>₱{menu.sizes[0].price.toFixed(2)}</span>
-                  ) : (
-                    <span>
-                      ₱{Math.min(...menu.sizes.map((s) => s.price)).toFixed(2)} - ₱
-                      {Math.max(...menu.sizes.map((s) => s.price)).toFixed(2)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <button
-              className={`button-primary ${
-                isMenuOutOfStock(menu) ? "button-disabled" : ""
-              }`}
-              onClick={() => onOpenSizeModal(menu)}
-              disabled={isMenuOutOfStock(menu)}
-            >
-              {isMenuOutOfStock(menu) ? "Out of Stock" : "Choose Size"}
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="menu-price">
-              <span>
-                ₱{menu.basePrice ? menu.basePrice.toFixed(2) : "N/A"}
-              </span>
-            </div>
-
-            <button
-              className={`button-primary ${
-                isMenuOutOfStock(menu) ? "button-disabled" : ""
-              }`}
-              onClick={() => onAddDirectToCart(menu)}
-              disabled={isMenuOutOfStock(menu)}
-            >
-              {isMenuOutOfStock(menu) ? "Out of Stock" : "Add to Cart"}
-            </button>
-          </>
-        )}
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
+// 🎯 MEMOIZED MENU CARD COMPONENT
+const MenuCard = memo(
+  ({
+    menu,
+    isMenuOutOfStock,
+    isMenuAvailable,
+    isRamenCategory,
+    onAddDirectToCart,
+    onOpenSizeModal,
+    onViewIngredientDetails,
+  }) => {
+    const handleImageError = useCallback(() => {
+      showToast("Failed to load menu image", "error");
+    }, []);
+
+    return (
+      <div
+        className={`menu-card ${isMenuOutOfStock(menu) ? "unavailable" : ""}`}
+      >
+        {/* Image Section */}
+        <div className="menu-card-image">
+          {menu.image?.url ? (
+            <LazyImage
+              src={menu.image.url}
+              alt={menu.image.alt || menu.name}
+              className="menu-card-image"
+              onError={handleImageError}
+              placeholder="🍜"
+            />
+          ) : (
+            <div className="menu-image-placeholder">
+              <span className="image-placeholder-icon">🍜</span>
+              <p>No Image</p>
+            </div>
+          )}
+        </div>
+
+        <div className="menu-card-content">
+          <div className="menu-card-header">
+            <h3>{menu.name}</h3>
+            <div className="availability-controls">
+              {isMenuAvailable(menu) ? (
+                <span className="status in">Available</span>
+              ) : (
+                <>
+                  <span className="status out">Out of stock</span>
+                  <button
+                    className="ingredient-details-btn"
+                    onClick={() => onViewIngredientDetails(menu)}
+                    title="View ingredient details"
+                  >
+                    ⓘ
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {menu.description && (
+            <p className="menu-description">{menu.description}</p>
+          )}
+
+          {isRamenCategory(menu) ? (
+            <>
+              {menu.sizes && menu.sizes.length > 0 && (
+                <div className="size-preview">
+                  <p className="size-count">
+                    {menu.sizes.length} size{menu.sizes.length > 1 ? "s" : ""}{" "}
+                    available
+                  </p>
+                  <div className="size-price-range">
+                    {menu.sizes.length === 1 ? (
+                      <span>₱{menu.sizes[0].price.toFixed(2)}</span>
+                    ) : (
+                      <span>
+                        ₱
+                        {Math.min(...menu.sizes.map((s) => s.price)).toFixed(2)}{" "}
+                        - ₱
+                        {Math.max(...menu.sizes.map((s) => s.price)).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <button
+                className={`button-primary ${
+                  isMenuOutOfStock(menu) ? "button-disabled" : ""
+                }`}
+                onClick={() => onOpenSizeModal(menu)}
+                disabled={isMenuOutOfStock(menu)}
+              >
+                {isMenuOutOfStock(menu) ? "Out of Stock" : "Choose Size"}
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="menu-price">
+                <span>
+                  ₱{menu.basePrice ? menu.basePrice.toFixed(2) : "N/A"}
+                </span>
+              </div>
+
+              <button
+                className={`button-primary ${
+                  isMenuOutOfStock(menu) ? "button-disabled" : ""
+                }`}
+                onClick={() => onAddDirectToCart(menu)}
+                disabled={isMenuOutOfStock(menu)}
+              >
+                {isMenuOutOfStock(menu) ? "Out of Stock" : "Add to Cart"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
 // 🎯 MAIN DASHBOARD COMPONENT
 export default function Dashboard() {
   const [menus, setMenus] = useState([]);
@@ -322,7 +350,8 @@ export default function Dashboard() {
 
   // Ingredient modal states
   const [showIngredientModal, setShowIngredientModal] = useState(false);
-  const [selectedMenuForIngredients, setSelectedMenuForIngredients] = useState(null);
+  const [selectedMenuForIngredients, setSelectedMenuForIngredients] =
+    useState(null);
 
   // Toast notification states
   const [toasts, setToasts] = useState([]);
@@ -345,27 +374,33 @@ export default function Dashboard() {
   // Memoized helper functions
   const isRamenCategory = useCallback((menu) => menu.category === "ramen", []);
 
-  const isMenuOutOfStock = useCallback((menu) => {
-    if (isRamenCategory(menu)) {
-      // Ramen: out of stock if all sizes are unavailable or sizes missing
-      if (!menu.sizes || menu.sizes.length === 0) return true;
-      return menu.sizes.every((size) => !size.isAvailable);
-    } else {
-      // Non-ramen: out of stock if not available
-      return !menu.isAvailable;
-    }
-  }, [isRamenCategory]);
+  const isMenuOutOfStock = useCallback(
+    (menu) => {
+      if (isRamenCategory(menu)) {
+        // Ramen: out of stock if all sizes are unavailable or sizes missing
+        if (!menu.sizes || menu.sizes.length === 0) return true;
+        return menu.sizes.every((size) => !size.isAvailable);
+      } else {
+        // Non-ramen: out of stock if not available
+        return !menu.isAvailable;
+      }
+    },
+    [isRamenCategory]
+  );
 
-  const isMenuAvailable = useCallback((menu) => {
-    if (isRamenCategory(menu)) {
-      // Ramen: available if at least one size is available
-      if (!menu.sizes || menu.sizes.length === 0) return false;
-      return menu.sizes.some((size) => size.isAvailable);
-    } else {
-      // Non-ramen: available if menu.isAvailable is true
-      return menu.isAvailable;
-    }
-  }, [isRamenCategory]);
+  const isMenuAvailable = useCallback(
+    (menu) => {
+      if (isRamenCategory(menu)) {
+        // Ramen: available if at least one size is available
+        if (!menu.sizes || menu.sizes.length === 0) return false;
+        return menu.sizes.some((size) => size.isAvailable);
+      } else {
+        // Non-ramen: available if menu.isAvailable is true
+        return menu.isAvailable;
+      }
+    },
+    [isRamenCategory]
+  );
 
   // Add missing helper function
   const getUnavailableIngredients = useCallback((menu, size = null) => {
@@ -408,106 +443,118 @@ export default function Dashboard() {
   }, [activeCategory, filteredMenus]);
 
   // 🚀 OPTIMIZED CART OPERATIONS
-  const addToCart = useCallback((menuItem, size = null, quantity = 1) => {
-    if (isRamenCategory(menuItem)) {
-      if (!size) {
-        showToast("Please select a size for this ramen item", "warning");
-        return;
+  const addToCart = useCallback(
+    (menuItem, size = null, quantity = 1) => {
+      if (isRamenCategory(menuItem)) {
+        if (!size) {
+          showToast("Please select a size for this ramen item", "warning");
+          return;
+        }
+        if (!size.isAvailable) {
+          showToast(
+            "This size is currently unavailable due to insufficient ingredients",
+            "error"
+          );
+          return;
+        }
+      } else {
+        if (!isMenuAvailable(menuItem)) {
+          showToast("This item is currently unavailable", "error");
+          return;
+        }
       }
-      if (!size.isAvailable) {
-        showToast(
-          "This size is currently unavailable due to insufficient ingredients",
-          "error"
+
+      const cartItemId = isRamenCategory(menuItem)
+        ? `${menuItem._id}-${size._id}`
+        : `${menuItem._id}`;
+
+      setCart((prevCart) => {
+        const existingItem = prevCart.items.find(
+          (item) => item.cartItemId === cartItemId
         );
-        return;
-      }
-    } else {
-      if (!isMenuAvailable(menuItem)) {
-        showToast("This item is currently unavailable", "error");
-        return;
-      }
-    }
 
-    const cartItemId = isRamenCategory(menuItem)
-      ? `${menuItem._id}-${size._id}`
-      : `${menuItem._id}`;
+        if (existingItem) {
+          return {
+            items: prevCart.items.map((item) =>
+              item.cartItemId === cartItemId
+                ? { ...item, quantity: item.quantity + quantity }
+                : item
+            ),
+          };
+        } else {
+          const newItem = {
+            cartItemId,
+            menuItem,
+            size,
+            quantity,
+            name: isRamenCategory(menuItem)
+              ? `${menuItem.name} (${size.label})`
+              : menuItem.name,
+            price: isRamenCategory(menuItem) ? size.price : menuItem.basePrice,
+          };
+          console.log(newItem);
+          return { items: [...prevCart.items, newItem] };
+        }
+      });
 
-    setCart(prevCart => {
-      const existingItem = prevCart.items.find(
-        (item) => item.cartItemId === cartItemId
+      showToast(
+        `${
+          isRamenCategory(menuItem)
+            ? `${menuItem.name} (${size.label})`
+            : menuItem.name
+        } added to cart`,
+        "success"
       );
 
-      if (existingItem) {
-        return {
-          items: prevCart.items.map((item) =>
-            item.cartItemId === cartItemId
-              ? { ...item, quantity: item.quantity + quantity }
-              : item
-          )
-        };
-      } else {
-        const newItem = {
-          cartItemId,
-          menuItem,
-          size,
-          quantity,
-          name: isRamenCategory(menuItem)
-            ? `${menuItem.name} (${size.label})`
-            : menuItem.name,
-          price: isRamenCategory(menuItem) ? size.price : menuItem.basePrice,
-        };
-        return { items: [...prevCart.items, newItem] };
+      if (isRamenCategory(menuItem)) {
+        setShowSizeModal(false);
+        setSelectedMenuItem(null);
+        setSelectedSize(null);
+        setModalQuantity(1);
       }
-    });
-
-    showToast(
-      `${
-        isRamenCategory(menuItem)
-          ? `${menuItem.name} (${size.label})`
-          : menuItem.name
-      } added to cart`,
-      "success"
-    );
-
-    if (isRamenCategory(menuItem)) {
-      setShowSizeModal(false);
-      setSelectedMenuItem(null);
-      setSelectedSize(null);
-      setModalQuantity(1);
-    }
-  }, [isRamenCategory, isMenuAvailable, showToast]);
+    },
+    [isRamenCategory, isMenuAvailable, showToast]
+  );
 
   const updateCartItemQuantity = useCallback((cartItemId, quantity) => {
     if (quantity < 1) {
-      setCart(prevCart => ({
-        items: prevCart.items.filter((item) => item.cartItemId !== cartItemId)
+      setCart((prevCart) => ({
+        items: prevCart.items.filter((item) => item.cartItemId !== cartItemId),
       }));
       return;
     }
-    
-    setCart(prevCart => ({
+
+    setCart((prevCart) => ({
       items: prevCart.items.map((item) =>
         item.cartItemId === cartItemId ? { ...item, quantity } : item
-      )
+      ),
     }));
   }, []);
 
-  const removeItemFromCart = useCallback((cartItemId) => {
-    setCart(prevCart => {
-      const itemToRemove = prevCart.items.find(
-        (item) => item.cartItemId === cartItemId
-      );
-      showToast(`${itemToRemove?.name || "Item"} removed from cart`, "info");
-      return {
-        items: prevCart.items.filter((item) => item.cartItemId !== cartItemId)
-      };
-    });
-  }, [showToast]);
+  const removeItemFromCart = useCallback(
+    (cartItemId) => {
+      setCart((prevCart) => {
+        const itemToRemove = prevCart.items.find(
+          (item) => item.cartItemId === cartItemId
+        );
+        showToast(`${itemToRemove?.name || "Item"} removed from cart`, "info");
+        return {
+          items: prevCart.items.filter(
+            (item) => item.cartItemId !== cartItemId
+          ),
+        };
+      });
+    },
+    [showToast]
+  );
 
   // Memoized menu action handlers
-  const handleAddDirectToCart = useCallback((menuItem) => {
-    addToCart(menuItem, null, 1);
-  }, [addToCart]);
+  const handleAddDirectToCart = useCallback(
+    (menuItem) => {
+      addToCart(menuItem, null, 1);
+    },
+    [addToCart]
+  );
 
   const handleOpenSizeModal = useCallback((menuItem) => {
     setSelectedMenuItem(menuItem);
@@ -546,9 +593,12 @@ export default function Dashboard() {
     }
   }, []);
 
-  const addSizeToCart = useCallback((menuItem, size, quantity = 1) => {
-    addToCart(menuItem, size, quantity);
-  }, [addToCart]);
+  const addSizeToCart = useCallback(
+    (menuItem, size, quantity = 1) => {
+      addToCart(menuItem, size, quantity);
+    },
+    [addToCart]
+  );
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -591,47 +641,48 @@ export default function Dashboard() {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         params: {
-          _t: Date.now() // Cache busting
-        }
+          _t: Date.now(),
+        },
       });
 
       if (!response.data.success) {
         throw new Error(response.data.message || "Failed to fetch menu");
       }
 
-      const menuData = response.data.data;
+      const menuData = response.data.data || [];
+      console.log("Fetched menu data:", menuData); // Debugging
       const validMenus = Array.isArray(menuData)
-        ? menuData.filter((menu) => menu && menu._id && menu.name)
+        ? menuData.filter(
+            (menu) => menu && menu._id && menu.name && typeof menu === "object"
+          )
         : [];
 
+      // Extract unique categories
+      const uniqueCategories = [
+        "All", // Always include "All" category
+        ...new Set(
+          validMenus
+            .map((menu) => menu.category || "Uncategorized")
+            .filter((category) => category)
+        ),
+      ];
+
       setMenus(validMenus);
-      setCategories(["All", ...(response.data.categories || [])]);
+      setCategories(uniqueCategories); // Set categories state
 
       if (showSuccessToast) {
-        showToast("Menu updated successfully", "success");
-      }
-
-      if (validMenus.length === 0) {
-        showToast("No menu items found", "info");
+        showToast("Menu refreshed successfully!", "success");
       }
     } catch (err) {
-      if (err.response?.status === 401) {
-        setError("Please log in to view the menu.");
-        showToast("Authentication required", "error");
-      } else if (err.response?.status === 404) {
-        setError("No menu items found.");
-        showToast("No menu items available", "warning");
-      } else {
-        const errorMessage =
-          err.response?.data?.message || "Failed to load menu.";
-        setError(errorMessage);
-        showToast(errorMessage, "error");
-      }
+      console.error("Fetch menu error:", err);
+      setError(
+        err.response?.data?.message || err.message || "Failed to fetch menu"
+      );
+      showToast(err.response?.data?.message || "Failed to fetch menu", "error");
     } finally {
       setLoading(false);
     }
   };
-
   const refreshMenu = useCallback(async () => {
     setRefreshLoading(true);
     try {
@@ -683,84 +734,151 @@ export default function Dashboard() {
   };
 
   const handlePaymentConfirm = async (payment) => {
-    const paymentAmount = parseFloat(payment);
+  const paymentAmount = parseFloat(payment);
 
-    if (isNaN(paymentAmount) || paymentAmount < orderTotal) {
-      showToast("Invalid or insufficient payment", "error");
-      return;
-    }
+  if (isNaN(paymentAmount) || paymentAmount < orderTotal) {
+    showToast("Invalid or insufficient payment", "error");
+    return;
+  }
 
-    setOrderLoading(true);
-    try {
-      const order = {
-        tableNumber: parseInt(localStorage.getItem("currentTableNumber")),
-        items: cart.items.map((item) => ({
-          menuItem: item.menuItem._id,
-          selectedSize: isRamenCategory(item.menuItem)
-            ? item.size.label
-            : undefined,
-          quantity: item.quantity,
-        })),
+  setOrderLoading(true);
+  try {
+    const order = {
+      tableNumber: parseInt(localStorage.getItem("currentTableNumber")) || 0,
+      items: cart.items.map((item) => ({
+        menuItem: item.menuItem._id,
+        selectedSize: isRamenCategory(item.menuItem)
+          ? item.size.label
+          : undefined,
+        quantity: item.quantity,
+      })),
+    };
+
+    console.log("Order payload:", JSON.stringify(order, null, 2));
+
+    const response = await axios.post(
+      "http://localhost:8000/api/order/dashboard",
+      order,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log("Backend response:", JSON.stringify(response.data, null, 2));
+
+    if (response.data.success) {
+      const receiptData = response.data.order || {}; // Use response.data.order
+
+      const validatedItems = Array.isArray(receiptData.items)
+        ? receiptData.items.map((item, index) => {
+            const cartItem = cart.items[index]; // Match by index
+            return {
+              name: item.menuItem?.name || cartItem?.name || "Unknown Item",
+              size: item.selectedSize || cartItem?.size?.label || "",
+              quantity: Number(item.quantity) || Number(cartItem?.quantity) || 0,
+              unitPrice:
+                Number(item.price) / Number(item.quantity) ||
+                Number(cartItem?.price) || 0,
+              subtotal:
+                Number(item.price) ||
+                (Number(item.price) / Number(item.quantity) || Number(cartItem?.price) || 0) *
+                  (Number(item.quantity) || Number(cartItem?.quantity) || 0),
+            };
+          })
+        : cart.items.map((cartItem) => ({
+            name: cartItem.name || "Unknown Item",
+            size: cartItem.size?.label || "",
+            quantity: Number(cartItem.quantity) || 0,
+            unitPrice: Number(cartItem.price) || 0,
+            subtotal: Number(cartItem.price) * Number(cartItem.quantity) || 0,
+          }));
+
+      const defaultStore = {
+        name: "DOKI DOKI RAMEN HOUSE",
+        address:
+          "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
+        phone: "+63 912 345 6789",
+        tin: "123-456-789-000",
+        businessPermit: "2024-001234",
       };
 
-      const response = await axios.post(
-        "http://localhost:8000/api/order/dashboard",
-        order,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "application/json",
-          },
+      const receiptObj = {
+        items: validatedItems,
+        store: receiptData.store || defaultStore,
+        orderNumber: receiptData._id?.slice(-8).toUpperCase() || `ORD-${Date.now()}`,
+        tableNumber:
+          receiptData.tableNumber ||
+          localStorage.getItem("currentTableNumber") ||
+          "N/A",
+        orderDate: receiptData.orderDate || new Date().toISOString(),
+        status: receiptData.status || "PENDING",
+        payment: paymentAmount,
+        bills: receiptData.bills || null,
+      };
+
+      console.log("Receipt object:", JSON.stringify(receiptObj, null, 2));
+
+      const actualTotal =
+        receiptObj.bills?.totalWithTax ||
+        validatedItems.reduce((sum, item) => sum + (item.subtotal || 0), 0) *
+          1.08;
+
+      setReceipt(receiptObj);
+      setChange(paymentAmount - actualTotal);
+
+      setShowReceipt(true);
+      setCart({ items: [] });
+
+      showToast("Order placed successfully!", "success");
+
+      setTimeout(() => {
+        if (showReceipt) {
+          closeReceipt();
         }
-      );
-
-      if (response.data.success) {
-        const receiptData = response.data.data;
-
-        setReceipt({
-          ...receiptData,
-          payment: paymentAmount,
-        });
-
-        const actualTotal = receiptData.bills.totalWithTax;
-        setChange(paymentAmount - actualTotal);
-
-        setShowReceipt(true);
-        setCart({ items: [] });
-
-        showToast("Order placed successfully!", "success");
-
-        // Auto-close receipt after 30 seconds
-        setTimeout(() => {
-          if (showReceipt) {
-            closeReceipt();
-          }
-        }, 30000);
-      } else {
-        throw new Error(response.data.message || "Order failed");
-      }
-    } catch (err) {
-      if (err.response) {
-        const errorMessage =
-          err.response.data?.message ||
-          err.response.data?.error ||
-          "Failed to place order";
-        showToast(`Order failed: ${errorMessage}`, "error");
-      } else if (err.request) {
-        showToast("Network error: Could not connect to server", "error");
-      } else {
-        showToast("Failed to place order. Please try again.", "error");
-      }
-    } finally {
-      setOrderLoading(false);
+      }, 30000);
+    } else {
+      throw new Error(response.data.message || "Order failed");
     }
-  };
-
+  } catch (err) {
+    console.error("Order error:", err);
+    const errorMessage =
+      err.response?.data?.message ||
+      err.response?.data?.error ||
+      err.message ||
+      "Failed to place order";
+    showToast(`Order failed: ${errorMessage}`, "error");
+  } finally {
+    setOrderLoading(false);
+  }
+};
   const closeReceipt = () => {
     setShowReceipt(false);
     setReceipt({});
     setChange(0);
   };
+  const clearCart = useCallback(() => {
+  setCart({ items: [] });
+  localStorage.removeItem("cart");
+  showToast("Cart cleared successfully", "info");
+}, [showToast]);
+
+// Enhanced useEffect for cart persistence - ensure localStorage sync
+useEffect(() => {
+  const timer = setTimeout(() => {
+    if (cart.items.length === 0) {
+      // If cart is empty, make sure localStorage is also cleared
+      localStorage.removeItem("cart");
+    } else {
+      // Only save to localStorage if cart has items
+      localStorage.setItem("cart", JSON.stringify(cart));
+    }
+  }, 100);
+
+  return () => clearTimeout(timer);
+}, [cart]);
 
   const printReceipt = () => {
     setPrintLoading(true);
@@ -779,7 +897,11 @@ export default function Dashboard() {
   };
 
   const renderReceiptItems = () => {
-    if (!receipt.items || receipt.items.length === 0) {
+    if (
+      !receipt.items ||
+      !Array.isArray(receipt.items) ||
+      receipt.items.length === 0
+    ) {
       return <div className="no-items">No items found</div>;
     }
 
@@ -787,9 +909,9 @@ export default function Dashboard() {
       const itemName = item.name || "Unknown Item";
       const itemSize =
         item.size && item.size !== "Classic" ? ` (${item.size})` : "";
-      const quantity = item.quantity || 0;
-      const unitPrice = item.unitPrice || 0;
-      const subtotal = item.subtotal || unitPrice * quantity;
+      const quantity = Number(item.quantity) || 0;
+      const unitPrice = Number(item.unitPrice) || 0;
+      const subtotal = Number(item.subtotal) || unitPrice * quantity;
 
       return (
         <div key={index} className="receipt-item-row">
@@ -806,30 +928,31 @@ export default function Dashboard() {
   };
 
   const getReceiptTotals = () => {
-    if (!receipt.bills) {
-      const subtotal =
-        receipt.items?.reduce((sum, item) => {
-          const itemTotal =
-            item.subtotal || item.unitPrice * item.quantity || 0;
-          return sum + itemTotal;
-        }, 0) || 0;
-
-      const tax = subtotal * 0.08;
-      const total = subtotal + tax;
-
+    if (receipt.bills && typeof receipt.bills === "object") {
       return {
-        subtotal,
-        tax,
-        total,
-        taxRate: "8%",
+        subtotal: Number(receipt.bills.subtotal) || 0,
+        tax: Number(receipt.bills.tax) || 0,
+        total: Number(receipt.bills.totalWithTax || receipt.bills.total) || 0,
+        taxRate: receipt.bills.taxRate || "0%",
       };
     }
 
+    const subtotal =
+      receipt.items?.reduce((sum, item) => {
+        const itemTotal =
+          Number(item.subtotal) ||
+          Number(item.unitPrice || 0) * Number(item.quantity || 0);
+        return sum + itemTotal;
+      }, 0) || 0;
+
+    const tax = subtotal * 0.08;
+    const total = subtotal + tax;
+
     return {
-      subtotal: receipt.bills.subtotal || 0,
-      tax: receipt.bills.tax || 0,
-      total: receipt.bills.totalWithTax || receipt.bills.total || 0,
-      taxRate: receipt.bills.taxRate || "8%",
+      subtotal,
+      tax,
+      total,
+      taxRate: "0%",
     };
   };
 
@@ -840,9 +963,9 @@ export default function Dashboard() {
     <div className="dashboard">
       {/* Toast Notifications */}
       <div className="toast-container">
-        {toasts.map((toast) => (
+        {toasts.map((toast, index) => (
           <Toast
-            key={toast.id}
+            key={index}
             message={toast.message}
             type={toast.type}
             onClose={() => removeToast(toast.id)}
@@ -1016,11 +1139,11 @@ export default function Dashboard() {
             title={selectedMenuItem.name}
             size="large"
           >
-            {selectedMenuItem.imageUrl && (
+            {selectedMenuItem.image?.url && (
               <div className="modal-image-container">
                 <LazyImage
-                  src={selectedMenuItem.imageUrl}
-                  alt={selectedMenuItem.imageAlt || selectedMenuItem.name}
+                  src={selectedMenuItem.image.url}
+                  alt={selectedMenuItem.image.alt || selectedMenuItem.name}
                   className="modal-image-container"
                   placeholder="🍜"
                 />
@@ -1152,152 +1275,166 @@ export default function Dashboard() {
 
       {/* Receipt Modal */}
       {showReceipt && (
-        <div className="receipt-modal">
-          <div className="receipt-box">
-            <div className="receipt-header">
-              <h3>Order Receipt</h3>
-            </div>
-            <div className="receipt-body" ref={receiptRef}>
-              <div className="receipt-store-header">
-                <h2 className="store-name">
-                  {receipt.store?.name || "DOKI DOKI RAMEN HOUSE"}
-                </h2>
-                <p className="store-address">
-                  {receipt.store?.address ||
-                    "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite"}
-                </p>
-                <p className="store-contact">
-                  Phone: {receipt.store?.phone || "+63 912 345 6789"}
-                </p>
-                <p className="store-tin">
-                  TIN: {receipt.store?.tin || "123-456-789-000"}
-                </p>
-                <p className="store-permit">
-                  BP: {receipt.store?.businessPermit || "2024-001234"}
-                </p>
+        <ErrorBoundary>
+          <div className="receipt-modal">
+            <div className="receipt-box">
+              <div className="receipt-header">
+                <h3>Order Receipt</h3>
               </div>
-
-              <div className="receipt-divider">
-                ========================================
-              </div>
-
-              <div className="receipt-order-info">
-                <div className="receipt-row">
-                  <span>Order #:</span>
-                  <span>{receipt.orderNumber}</span>
+              <div className="receipt-body" ref={receiptRef}>
+                <div className="receipt-store-header">
+                  <h2 className="store-name">
+                    {receipt.store?.name || "DOKI DOKI RAMEN HOUSE"}
+                  </h2>
+                  <p className="store-address">
+                    {receipt.store?.address ||
+                      "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite"}
+                  </p>
+                  <p className="store-contact">
+                    Phone: {receipt.store?.phone || "+63 912 345 6789"}
+                  </p>
+                  <p className="store-tin">
+                    TIN: {receipt.store?.tin || "123-456-789-000"}
+                  </p>
+                  <p className="store-permit">
+                    BP: {receipt.store?.businessPermit || "2024-001234"}
+                  </p>
                 </div>
-                <div className="receipt-row">
-                  <span>Table:</span>
-                  <span>{receipt.tableNumber}</span>
+
+                <div className="receipt-divider">
+                  ========================================
                 </div>
-                <div className="receipt-row">
-                  <span>Date:</span>
-                  <span>
-                    {new Date(receipt.orderDate).toLocaleDateString("en-PH")}
-                  </span>
+
+                <div className="receipt-order-info">
+                  <div className="receipt-row">
+                    <span>Order #:</span>
+                    <span>{receipt.orderNumber || `ORD-${Date.now()}`}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span>Table:</span>
+                    <span>{receipt.tableNumber || "N/A"}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span>Date:</span>
+                    <span>
+                      {receipt.orderDate
+                        ? new Date(receipt.orderDate).toLocaleDateString(
+                            "en-PH"
+                          )
+                        : new Date().toLocaleDateString("en-PH")}
+                    </span>
+                  </div>
+                  <div className="receipt-row">
+                    <span>Time:</span>
+                    <span>
+                      {receipt.orderDate
+                        ? new Date(receipt.orderDate).toLocaleTimeString(
+                            "en-PH"
+                          )
+                        : new Date().toLocaleTimeString("en-PH")}
+                    </span>
+                  </div>
+                  <div className="receipt-row">
+                    <span>Status:</span>
+                    <span>{(receipt.status || "PENDING").toUpperCase()}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span>Payment:</span>
+                    <span>
+                      {Number(receipt.payment)
+                        ? `₱${Number(receipt.payment).toFixed(2)}`
+                        : "CASH"}
+                    </span>
+                  </div>
                 </div>
-                <div className="receipt-row">
-                  <span>Time:</span>
-                  <span>
-                    {new Date(receipt.orderDate).toLocaleTimeString("en-PH")}
-                  </span>
+
+                <div className="receipt-divider">
+                  ----------------------------------------
                 </div>
-                <div className="receipt-row">
-                  <span>Status:</span>
-                  <span>{(receipt.status || "PENDING").toUpperCase()}</span>
+
+                <div className="receipt-items-header">
+                  <div className="item-col-name">ITEM</div>
+                  <div className="item-col-qty">QTY</div>
+                  <div className="item-col-price">PRICE</div>
+                  <div className="item-col-total">TOTAL</div>
                 </div>
-                <div className="receipt-row">
-                  <span>Payment:</span>
-                  <span>{receipt.payment || "CASH"}</span>
+
+                <div className="receipt-divider">
+                  ----------------------------------------
                 </div>
-              </div>
 
-              <div className="receipt-divider">
-                ----------------------------------------
-              </div>
+                <div className="receipt-items">{renderReceiptItems()}</div>
 
-              <div className="receipt-items-header">
-                <div className="item-col-name">ITEM</div>
-                <div className="item-col-qty">QTY</div>
-                <div className="item-col-price">PRICE</div>
-                <div className="item-col-total">TOTAL</div>
-              </div>
-
-              <div className="receipt-divider">
-                ----------------------------------------
-              </div>
-
-              <div className="receipt-items">{renderReceiptItems()}</div>
-
-              <div className="receipt-divider">
-                ----------------------------------------
-              </div>
-
-              <div className="receipt-totals">
-                <div className="receipt-total-row">
-                  <span>Subtotal:</span>
-                  <span>₱{getReceiptTotals().subtotal.toFixed(2)}</span>
+                <div className="receipt-divider">
+                  ----------------------------------------
                 </div>
-                <div className="receipt-total-row">
-                  <span>Tax ({getReceiptTotals().taxRate}):</span>
-                  <span>₱{getReceiptTotals().tax.toFixed(2)}</span>
+
+                <div className="receipt-totals">
+                  <div className="receipt-total-row">
+                    <span>Subtotal:</span>
+                    <span>₱{getReceiptTotals().subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="receipt-total-row">
+                    <span>Tax ({getReceiptTotals().taxRate}):</span>
+                    <span>₱{getReceiptTotals().tax.toFixed(2)}</span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="receipt-divider-double">
-                ========================================
-              </div>
-
-              <div className="receipt-grand-total">
-                <div className="receipt-total-row grand">
-                  <span>TOTAL:</span>
-                  <span>₱{getReceiptTotals().total.toFixed(2)}</span>
+                <div className="receipt-divider-double">
+                  ========================================
                 </div>
-              </div>
 
-              <div className="receipt-divider">
-                ========================================
-              </div>
-
-              <div className="receipt-payment">
-                <div className="receipt-total-row">
-                  <span>Cash Received:</span>
-                  <span>₱{(receipt.payment || 0).toFixed(2)}</span>
+                <div className="receipt-grand-total">
+                  <div className="receipt-total-row grand">
+                    <span>TOTAL:</span>
+                    <span>₱{getReceiptTotals().total.toFixed(2)}</span>
+                  </div>
                 </div>
-                <div className="receipt-total-row">
-                  <span>Change:</span>
-                  <span>₱{change.toFixed(2)}</span>
+
+                <div className="receipt-divider">
+                  ========================================
                 </div>
-              </div>
 
-              <div className="receipt-divider">
-                ========================================
-              </div>
+                <div className="receipt-payment">
+                  <div className="receipt-total-row">
+                    <span>Cash Received:</span>
+                    <span>₱{(Number(receipt.payment) || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="receipt-total-row">
+                    <span>Change:</span>
+                    <span>₱{Number(change).toFixed(2)}</span>
+                  </div>
+                </div>
 
-              <div className="receipt-footer">
-                <p className="thank-you">Thank you for dining with us!</p>
-                <p className="come-again">Please come again!</p>
-                <div className="receipt-meta">
-                  <p>Cashier: System</p>
-                  <p>Printed: {new Date().toLocaleString("en-PH")}</p>
+                <div className="receipt-divider">
+                  ========================================
+                </div>
+
+                <div className="receipt-footer">
+                  <p className="thank-you">Thank you for dining with us!</p>
+                  <p className="come-again">Please come again!</p>
+                  <div className="receipt-meta">
+                    <p>Cashier: System</p>
+                    <p>Printed: {new Date().toLocaleString("en-PH")}</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="receipt-actions">
-              <button
-                className="button-primary"
-                onClick={printReceipt}
-                disabled={printLoading}
-              >
-                {printLoading ? "Printing..." : "Print Receipt"}
-              </button>
-              <button className="button-secondary" onClick={closeReceipt}>
-                Close
-              </button>
+              <div className="receipt-actions">
+                <button
+                  className="button-primary"
+                  onClick={printReceipt}
+                  disabled={printLoading}
+                >
+                  {printLoading ? "Printing..." : "Print Receipt"}
+                </button>
+                <button className="button-secondary" onClick={closeReceipt}>
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ErrorBoundary>
       )}
 
       {/* Ingredient Details Modal */}

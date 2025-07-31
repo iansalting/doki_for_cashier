@@ -51,6 +51,7 @@ const Navbar = () => {
       dropdown: [
         { path: "/Transaction/storage-transaction", label: "Add Item" },
         { path: "/Transaction/menulist-transaction", label: "Add Menu" },
+        { path: "/Transaction/Images", label: "Upload Image" },
         { path: "/Transaction/delivery", label: "Add Delivery" },
       ],
     },

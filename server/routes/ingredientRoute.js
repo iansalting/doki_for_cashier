@@ -1,47 +1,48 @@
-import express from 'express';
+import express from "express";
 import {
   getAllIngredient,
   getIngredientById,
   addIngredient,
   deleteIngredient,
-  updateIngredient
-} from '../controller/ingredientController.js';
-import verifyToken from '../middlewares/tokenVerification.js';
-import { authorizeRole } from '../middlewares/roleMiddleware.js';
+  updateIngredient,
+  getIngredientBatches,
+  deleteBatch,
+  getExpiredIngredients,
+} from "../controller/ingredientController.js";
+import verifyToken from "../middlewares/tokenVerification.js";
+import { authorizeRole } from "../middlewares/roleMiddleware.js";
 
 const router = express.Router();
 
 // Apply authentication to all routes
 router.use(verifyToken);
 
-// POST - Add ingredient (SuperAdmin only)
-router.route("/post").post(
-  authorizeRole("superadmin"),
-  addIngredient
-);
+// SPECIFIC ROUTES FIRST (before parameterized routes)
 
-// DELETE - Delete ingredient (SuperAdmin only)
-router.route("/delete/:id").delete(
-  authorizeRole("superadmin"),
-  deleteIngredient
-);
+// GET - Get expired ingredients (Admin or SuperAdmin can view)
+router.get("/expired", authorizeRole("superadmin", "admin"), getExpiredIngredients);
 
-// PATCH - Update ingredient (SuperAdmin only)
-router.route("/update/:id").patch(
-  authorizeRole("superadmin"),
-  updateIngredient
-);
+// GET - Get ingredient batches (Admin or SuperAdmin can view)  
+router.get("/batches", authorizeRole("superadmin", "admin"), getIngredientBatches);
 
 // GET - Get all ingredients (Admin or SuperAdmin can view)
-router.route("/").get(
-  authorizeRole("superadmin", "admin"),
-  getAllIngredient
-);
+router.get("/", authorizeRole("superadmin", "admin"), getAllIngredient);
+
+// POST - Add ingredient (SuperAdmin only)
+router.post("/", authorizeRole("superadmin"), addIngredient);
+
+// PARAMETERIZED ROUTES LAST
 
 // GET - Get ingredient by ID (Admin or SuperAdmin can view)
-router.route("/:id").get(
-  authorizeRole("superadmin", "admin"),
-  getIngredientById
-);
+router.get("/:id", authorizeRole("superadmin", "admin"), getIngredientById);
+
+// PUT - Update ingredient (SuperAdmin only)
+router.put("/:id", authorizeRole("superadmin"), updateIngredient);
+
+// DELETE - Delete ingredient (SuperAdmin only)
+router.delete("/:id", authorizeRole("superadmin"), deleteIngredient);
+
+// DELETE - Delete specific batch (SuperAdmin only)
+router.delete("/:ingredientId/batch/:batchIndex", authorizeRole("superadmin"), deleteBatch);
 
 export default router;

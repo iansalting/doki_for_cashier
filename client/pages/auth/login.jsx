@@ -57,10 +57,6 @@ const handleSubmit = async (e) => {
         />
 
         <button type="submit">Login</button>
-
-        <p className="register-link">
-          Not registered? <Link to="/register">Register here</Link>
-        </p>
       </form>
     </div>
   );

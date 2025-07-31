@@ -713,3 +713,23 @@
     font-size: 1.5rem;
   }
 }
+
+.sales-download-button {
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+}
+
+.sales-download-button button {
+  background-color: rgba(255, 97, 0, 1);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.sales-download-button button:hover {
+  background-color: #cc4f00;
+}

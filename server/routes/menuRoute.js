@@ -1,11 +1,18 @@
 import express from 'express'
 const router = express.Router()
-import {addMenu, updateMenu, getAllMenu, getMenuById} from '../controller/menuController.js'
+import {addMenu, updateMenu, getAllMenu, getMenuById, deleteSizeIngredient, addSizeIngredient, updateSizeIngredientQuantity, updateSizeIngredient} from '../controller/menuController.js'
 import verifyToken from '../middlewares/tokenVerification.js';
 import { authorizeRole } from '../middlewares/roleMiddleware.js';
 
 
 router.use(verifyToken);
+
+router.route("/:menuId/size/:label/ingredient").post(
+  authorizeRole("superadmin"),
+  addSizeIngredient  
+);
+
+router.route( "/:menuId/size/:label/ingredient/:ingredientId").delete(authorizeRole("superadmin"), deleteSizeIngredient);
 
 // GET routes - Both admin and superadmin can view
 router.route("/").get(
@@ -27,6 +34,17 @@ router.route("/post").post(
 router.route("/update/:id").patch(
   authorizeRole("superadmin"),
   updateMenu
+);
+
+router.patch(
+  "/:menuId/size/:label/ingredient/:ingredientId/quantity",
+  authorizeRole("superadmin"),
+  updateSizeIngredientQuantity
+);
+
+router.route("/:menuId/size/:label/ingredient/:ingredientId").patch(
+  authorizeRole("superadmin"),
+  updateSizeIngredient
 );
 
 

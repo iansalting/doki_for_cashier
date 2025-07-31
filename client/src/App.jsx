@@ -14,7 +14,8 @@ import {
   Sales,
   Deliver,
   DeliveryTransaction,
-  Transaction
+  Transaction,
+  Images,
 } from "../pages/index.js";
 import Navbar from "../components/Navbar.jsx";
 
@@ -34,11 +35,12 @@ function AppContent() {
         <Route path="/salesreport/storage" element={<Inventory />} />
         <Route path="/salesreport/menulist" element={<Inventory />} />
         <Route path="/salesreport/sales" element={<Sales />} />
-         <Route path="/salesreport/transactions" element={<Transaction />} />
+        <Route path="/salesreport/transactions" element={<Transaction />} />
         <Route path="/salesreport/delivery" element={<Deliver />} />
         <Route path="/Transaction/delivery" element={<DeliveryTransaction />} />
         <Route path="/Transaction/storage-transaction" element={<AddITem />} />
         <Route path="/Transaction/menulist-transaction" element={<AddMenu />} />
+        <Route path="/Transaction/images" element={<Images />} />
       </Routes>
     </>
   );

@@ -1,15 +1,9 @@
 import { useState, useEffect } from "react";
-import {
-  Calendar,
-  Info,
-  ChevronDown,
-  ChevronUp,
-  Trash2,
-} from "lucide-react";
+import { Calendar, Info, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import axios from "axios";
-import "./delivery.css"
+import "./delivery.css";
 
-const delivery = () => {
+const DeliveryDashboard = () => {
   const [deliveries, setDeliveries] = useState([]);
   const [filteredDeliveries, setFilteredDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,10 +22,9 @@ const delivery = () => {
     setError(null);
     try {
       const token = localStorage.getItem("token");
+      if (!token) throw new Error("Please log in to continue");
       const response = await axios.get("http://localhost:8000/api/delivery/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const deliveriesData = response.data.data || response.data;
       setDeliveries(deliveriesData);
@@ -60,16 +53,15 @@ const delivery = () => {
     setError(null);
 
     try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Please log in to continue");
       const response = await axios.get(
         "http://localhost:8000/api/delivery/date",
         {
-          params: {
-            startDate,
-            endDate,
-          },
+          params: { startDate, endDate },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-
       const deliveriesData = response.data.data || response.data;
       setFilteredDeliveries(
         sortDeliveriesByDate(deliveriesData, sortDirection)
@@ -111,9 +103,7 @@ const delivery = () => {
   const formatDate = (dateString) => {
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return "Invalid Date";
-      }
+      if (isNaN(date.getTime())) return "Invalid Date";
       return date.toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
@@ -121,7 +111,7 @@ const delivery = () => {
         hour: "2-digit",
         minute: "2-digit",
       });
-    } catch (err) {
+    } catch {
       return "Invalid Date";
     }
   };
@@ -136,7 +126,11 @@ const delivery = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:8000/api/delivery/${deliveryId}`);
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Please log in to continue");
+      await axios.delete(`http://localhost:8000/api/delivery/${deliveryId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const updatedDeliveries = deliveries.filter((d) => d._id !== deliveryId);
       setDeliveries(updatedDeliveries);
@@ -165,7 +159,6 @@ const delivery = () => {
           </div>
         )}
 
-        {/* Filter Section */}
         <div className="filter-card">
           <h2 className="filter-title">
             <Calendar size={20} />
@@ -210,7 +203,6 @@ const delivery = () => {
           </div>
         </div>
 
-        {/* Deliveries List */}
         <div className="deliveries-card">
           <div className="deliveries-header">
             <h2 className="deliveries-title">
@@ -246,10 +238,14 @@ const delivery = () => {
                   >
                     <div className="delivery-info">
                       <h3>
-                        Delivery from {delivery.supplier || "Unknown Supplier"}
+                        Delivery {delivery.deliveryNumber} from{" "}
+                        {delivery.supplier || "Unknown Supplier"}
                       </h3>
                       <p className="delivery-date">
                         Date: {formatDate(delivery.deliveryDate)}
+                      </p>
+                      <p className="delivery-address">
+                        Address: {delivery.address || "No address provided"}
                       </p>
                       {delivery.notes && (
                         <p
@@ -295,16 +291,23 @@ const delivery = () => {
                       <h4 className="details-title">
                         <Info size={16} /> Items in this delivery:
                       </h4>
-                      {delivery.items && delivery.items.length > 0 ? (
+                      {Array.isArray(delivery.items) &&
+                      delivery.items.length > 0 ? (
                         <ul className="items-list">
                           {delivery.items.map((item, index) => (
-                            <li key={index} className="item">
+                            <li
+                              key={item._id || `item-${index}`}
+                              className="item"
+                            >
                               <span className="item-name">
-                                {item.ingredient?.name || "Unknown Ingredient"}
+                                {item.ingredientName || "Unknown Ingredient"}
                               </span>
                               <span className="item-quantity">
-                                - Quantity: {item.quantity}{" "}
-                                {item.ingredient?.unit || "units"}
+                                - {parseInt(item.quantity)} pcs (
+                                {item.unitPerPcs} {item.unit} per pcs) ={" "}
+                                {parseInt(item.quantity * item.unitPerPcs)}{" "}
+                                {item.unit}, Price: ${item.price.toFixed(2)},
+                                Expires: {formatDate(item.expirationDate)}
                               </span>
                             </li>
                           ))}
@@ -324,4 +327,4 @@ const delivery = () => {
   );
 };
 
-export default delivery;
+export default DeliveryDashboard;

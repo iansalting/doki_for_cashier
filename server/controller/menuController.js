@@ -1,16 +1,53 @@
+import config from "../config/config.js";
 import Ingredient from "../model/ingredientModel.js";
 import Menu from "../model/menuModel.js";
 import createHttpError from "http-errors";
+import NodeCache from "node-cache";
+const cache = new NodeCache({ stdTTL: 3600 });
+const getImageUrl = (menu) => {
+  try {
+    if (!menu.image) {
+      return null;
+    }
+
+    const currentPort = config.port || "8000";
+
+    if (currentPort === "8000" && menu.imageUrlPort8000) {
+      console.log(
+        `🖼️ Using stored URL for port 8000: ${menu.imageUrlPort8000}`
+      );
+      return menu.imageUrlPort8000;
+    }
+    if (currentPort === "5000" && menu.imageUrlPort5000) {
+      console.log(
+        `🖼️ Using stored URL for port 5000: ${menu.imageUrlPort5000}`
+      );
+      return menu.imageUrlPort5000;
+    }
+
+    // Fallback: construct URL dynamically
+    const baseUrl = config.baseUrl || `http://localhost:${currentPort}`;
+    const cleanBaseUrl = baseUrl.replace(/\/$/, "");
+    const imageUrl = `${cleanBaseUrl}/uploads/menu/${menu.image}`;
+
+    console.log(`🖼️ Generated fallback image URL: ${imageUrl}`);
+    return imageUrl;
+  } catch (error) {
+    console.error("❌ Error constructing image URL:", error);
+    return null;
+  }
+};
 
 const getAllMenu = async (req, res, next) => {
   const startTime = Date.now();
-  console.log("🚀 Starting getAllMenu...");
+  console.log('🚀 Starting getAllMenu...');
+  
   try {
     res.set({
-      "Cache-Control": "no-store",
-      Pragma: "no-cache",
-      Expires: "0",
-      Vary: "Accept-Encoding, Authorization",
+      'Cache-Control': 'no-store',
+      Pragma: 'no-cache',
+      Expires: '0',
+      Vary: 'Accept-Encoding, Authorization',
     });
 
     const { category, available, showUnavailable } = req.query;
@@ -21,20 +58,21 @@ const getAllMenu = async (req, res, next) => {
       filter.category = category;
     }
     if (available !== undefined) {
-      filter.available = available === "true";
+      filter.available = available === 'true';
     }
 
-    console.log("📊 Database query starting...");
+    console.log('📊 Database query starting...');
     const dbStartTime = Date.now();
 
-    // Optimize database query with lean() and selective field loading
+    // Fetch menus with populated ingredients - INCLUDE imageUrl fields
     const menus = await Menu.find(filter)
       .populate({
-        path: "sizes.ingredients.ingredient",
-        select: "name quantity unit", // Only select needed fields for better performance
+        path: 'sizes.ingredients.ingredient',
+        select: 'name unit batches',
+        options: { virtuals: true },
       })
-      .select("-__v") // Exclude version field
-      .lean() // Return plain JavaScript objects for better performance
+      .select('name description category available sizes image imageAlt imageUrlPort8000 imageUrlPort5000 createdAt updatedAt')
+      .lean()
       .sort({ category: 1, name: 1 });
 
     console.log(`📊 Database query completed in: ${Date.now() - dbStartTime}ms`);
@@ -45,20 +83,18 @@ const getAllMenu = async (req, res, next) => {
         success: true,
         data: [],
         categories: [],
-        message: "No menu items found",
+        message: 'No menu items found',
       });
     }
 
-    console.log("🔄 Processing menus...");
+    console.log('🔄 Processing menus...');
     const processingStartTime = Date.now();
 
     const categoriesSet = new Set();
 
-    // Process menus with optimized async handling
+    // Process menus with availability check
     const menusWithAvailability = await Promise.all(
       menus.map(async (menu) => {
-        // Since we're using lean(), menu is already a plain object
-
         // Collect category
         if (menu.category) {
           categoriesSet.add(menu.category);
@@ -71,32 +107,59 @@ const getAllMenu = async (req, res, next) => {
                 let isAvailable = true;
                 const unavailableIngredients = [];
 
-                // Only check ingredients if they exist
                 if (size.ingredients && size.ingredients.length > 0) {
                   for (const menuIngredient of size.ingredients) {
-                    const ingredient = menuIngredient.ingredient;
-                    const requiredQuantity = menuIngredient.quantity || 1;
+                    try {
+                      const ingredientDoc = menuIngredient.ingredient;
 
-                    if (!ingredient) {
+                      if (!ingredientDoc) {
+                        isAvailable = false;
+                        unavailableIngredients.push({
+                          name: 'Unknown ingredient',
+                          reason: 'Ingredient not found or not populated',
+                        });
+                        continue;
+                      }
+
+                      let totalAvailable = 0;
+                      if (
+                        Array.isArray(ingredientDoc.batches) &&
+                        ingredientDoc.batches.length > 0
+                      ) {
+                        console.log(`🔍 Ingredient: ${ingredientDoc.name}`);
+                        const now = new Date();
+                        const validBatches = ingredientDoc.batches.filter(
+                          (batch) => new Date(batch.expirationDate) > now && batch.quantity > 0
+                        );
+                        totalAvailable = validBatches.reduce(
+                          (sum, batch) => sum + batch.quantity,
+                          0
+                        );
+                      } else if (ingredientDoc.totalQuantity !== undefined) {
+                        totalAvailable = ingredientDoc.totalQuantity;
+                      }
+
+                      const requiredQuantity = menuIngredient.quantity || 1;
+
+                      if (totalAvailable < requiredQuantity) {
+                        isAvailable = false;
+                        unavailableIngredients.push({
+                          name: ingredientDoc.name,
+                          required: requiredQuantity,
+                          available: totalAvailable,
+                          unit: ingredientDoc.unit || 'units',
+                          reason:
+                            totalAvailable === 0
+                              ? 'Out of stock or all batches expired'
+                              : 'Insufficient stock',
+                        });
+                      }
+                    } catch (err) {
+                      console.error('❌ Error checking ingredient availability:', err.message);
                       isAvailable = false;
                       unavailableIngredients.push({
-                        name: "Unknown ingredient",
-                        reason: "Ingredient not found in inventory",
-                      });
-                    } else if (
-                      typeof ingredient.quantity === "number" &&
-                      ingredient.quantity < requiredQuantity
-                    ) {
-                      isAvailable = false;
-                      unavailableIngredients.push({
-                        name: ingredient.name,
-                        required: requiredQuantity,
-                        available: ingredient.quantity,
-                        unit: ingredient.unit || "units",
-                        reason:
-                          ingredient.quantity === 0
-                            ? "Out of stock"
-                            : "Insufficient stock",
+                        name: 'Error checking ingredient',
+                        reason: err.message,
                       });
                     }
                   }
@@ -108,42 +171,31 @@ const getAllMenu = async (req, res, next) => {
                   price: size.price,
                   isAvailable,
                   unavailableIngredients:
-                    unavailableIngredients.length > 0
-                      ? unavailableIngredients
-                      : undefined,
+                    unavailableIngredients.length > 0 ? unavailableIngredients : undefined,
                   ingredients: size.ingredients || [],
                 };
               })
             )
           : [];
 
-        // Calculate basePrice - prefer Classic, fall back to lowest price
+        // Calculate basePrice
         let basePrice = null;
-        const classic = sizesWithAvailability.find(
-          (s) => s.label === "Classic"
-        );
-
+        const classic = sizesWithAvailability.find((s) => s.label === 'Classic');
         if (classic) {
           basePrice = classic.price;
         } else if (sizesWithAvailability.length > 0) {
           basePrice = Math.min(...sizesWithAvailability.map((s) => s.price));
         }
 
-        // Menu is available if it's marked as available AND has at least one available size
+        // Determine menu availability
         const isMenuAvailable =
           menu.available &&
           (sizesWithAvailability.length > 0
             ? sizesWithAvailability.some((size) => size.isAvailable)
             : true);
 
-        // Optimized image URL generation with environment fallback
-        let imageUrl = null;
-        if (menu.image) {
-          // Use environment variable if available, otherwise construct from request
-          const baseUrl =
-            process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
-          imageUrl = `${baseUrl}/uploads/menu/${menu.image}`;
-        }
+        // FIXED: Get image URL using the getImageUrl function
+        const imageUrl = getImageUrl(menu);
 
         return {
           _id: menu._id,
@@ -154,9 +206,11 @@ const getAllMenu = async (req, res, next) => {
           sizes: sizesWithAvailability,
           isAvailable: isMenuAvailable,
           basePrice,
-          image: menu.image,
-          imageAlt: menu.imageAlt,
-          imageUrl: imageUrl,
+          image: {
+            filename: menu.image || null,
+            url: imageUrl,
+            alt: menu.imageAlt || `Image of ${menu.name}`,
+          },
           createdAt: menu.createdAt,
           updatedAt: menu.updatedAt,
         };
@@ -167,31 +221,11 @@ const getAllMenu = async (req, res, next) => {
 
     // Filter out unavailable items if requested
     const finalMenus =
-      showUnavailable === "false"
+      showUnavailable === 'false'
         ? menusWithAvailability.filter((menu) => menu.isAvailable)
         : menusWithAvailability;
 
-    console.log("🔐 Generating ETag...");
-    const etagStartTime = Date.now();
-
-    // TEMPORARILY DISABLED FOR PERFORMANCE TESTING
-    // Generate ETag for better caching (optional, mainly for proxy/CDN)
-    // const crypto = await import("crypto");
-    // const etag = crypto
-    //   .createHash("md5")
-    //   .update(JSON.stringify(finalMenus))
-    //   .digest("hex");
-
-    // res.set("ETag", `"${etag}"`);
-
-    // if (req.headers["if-none-match"] === `"${etag}"`) {
-    //   return res.status(304).end();
-    // }
-
-    console.log(`🔐 ETag generation completed in: ${Date.now() - etagStartTime}ms`);
-
-    // Add performance timing header (optional)
-    res.set("X-Response-Time", `${Date.now() - startTime}ms`);
+    res.set('X-Response-Time', `${Date.now() - startTime}ms`);
 
     console.log(`✅ getAllMenu completed in: ${Date.now() - startTime}ms`);
 
@@ -200,27 +234,21 @@ const getAllMenu = async (req, res, next) => {
       data: finalMenus,
       categories: Array.from(categoriesSet).sort(),
       total: finalMenus.length,
-      // Optional: Add cache info for debugging
       cache: {
-        // etag: etag, // Disabled for now
         timestamp: new Date().toISOString(),
       },
     });
   } catch (error) {
-    console.error("❌ Error in getAllMenu:", error);
+    console.error('❌ Error in getAllMenu:', error);
     console.log(`❌ getAllMenu failed in: ${Date.now() - startTime}ms`);
 
-    // Handle specific errors
-    if (error.name === "CastError") {
-      return next(createHttpError(400, "Invalid menu ID format"));
+    if (error.name === 'CastError') {
+      return next(createHttpError(400, 'Invalid menu ID format'));
     }
-
-    if (error.name === "ValidationError") {
+    if (error.name === 'ValidationError') {
       return next(createHttpError(400, `Validation error: ${error.message}`));
     }
-
-    // Generic server error
-    next(createHttpError(500, "Failed to fetch menu items"));
+    next(createHttpError(500, 'Failed to fetch menu items'));
   }
 };
 
@@ -539,86 +567,307 @@ const updateMenu = async (req, res, next) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    console.log("Received update request:", { id, updateData });
+
+    // Validate menuId
+    const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+    if (!isValidObjectId(id)) {
+      throw createHttpError(400, `Invalid menu ID: ${id}`);
+    }
+
+    // Find menu item
     const menuItem = await Menu.findById(id);
     if (!menuItem) {
       throw createHttpError(404, "Menu item not found");
     }
 
+    console.log("Menu category:", menuItem.category);
+
     // Update basic fields
     if (updateData.name) menuItem.name = updateData.name;
     if (updateData.description) menuItem.description = updateData.description;
+    if (updateData.available !== undefined)
+      menuItem.available = updateData.available;
 
     // Handle category changes
     if (updateData.category) {
       menuItem.category = updateData.category;
 
-      // If changing TO ramen, ensure sizes exist
       if (
         updateData.category === "ramen" &&
-        (!menuItem.sizes || menuItem.sizes.length === 0)
+        (!menuItem.sizes || menuItem.sizes.length === 0) &&
+        (!updateData.sizes || updateData.sizes.length === 0)
       ) {
-        if (!updateData.sizes || updateData.sizes.length === 0) {
-          return next(
-            createHttpError(
-              400,
-              "Sizes are required when changing category to ramen"
-            )
-          );
-        }
-      }
-
-      // If changing FROM ramen to normal, clear sizes
-      if (
-        updateData.category !== "ramen" &&
-        menuItem.sizes &&
-        menuItem.sizes.length > 0
-      ) {
-        menuItem.sizes = [];
+        throw createHttpError(
+          400,
+          "Sizes are required when changing category to ramen"
+        );
       }
     }
 
-    // Handle size updates (only for ramen category)
+    // Handle size updates for all categories
     if (updateData.sizes && Array.isArray(updateData.sizes)) {
-      if (menuItem.category !== "ramen") {
-        return next(createHttpError(400, "Only ramen category can have sizes"));
-      }
-
-      // Your existing size update logic here...
       for (const updatedSize of updateData.sizes) {
         const existingSize = menuItem.sizes.find(
           (s) => s.label === updatedSize.label
         );
         if (!existingSize) {
+          // Add new size
+          menuItem.sizes.push({
+            label: updatedSize.label,
+            price: parseFloat(updatedSize.price) || 0,
+            ingredients: updatedSize.ingredients || [],
+            isAvailable:
+              updatedSize.isAvailable !== undefined
+                ? updatedSize.isAvailable
+                : true,
+          });
           continue;
         }
 
+        // Update existing size
         if (updatedSize.price !== undefined) {
-          existingSize.price = updatedSize.price;
+          console.log(
+            `Updating price for size ${updatedSize.label}:`,
+            updatedSize.price
+          );
+          existingSize.price = parseFloat(updatedSize.price) || 0;
+        }
+        if (updatedSize.isAvailable !== undefined) {
+          existingSize.isAvailable = updatedSize.isAvailable;
         }
 
         if (updatedSize.ingredients && Array.isArray(updatedSize.ingredients)) {
-          const ingredientIds = updatedSize.ingredients.map(
-            (ing) => ing.ingredient
-          );
-          const existingIngredients = await Ingredient.find({
-            _id: { $in: ingredientIds },
-          });
-          if (existingIngredients.length !== ingredientIds.length) {
-            throw createHttpError(
-              404,
-              `One or more ingredients not found for size ${updatedSize.label}`
-            );
+          const ingredientIds = updatedSize.ingredients
+            .map((ing) => ing.ingredient)
+            .filter(Boolean);
+          if (ingredientIds.length > 0) {
+            const existingIngredients = await Ingredient.find({
+              _id: { $in: ingredientIds },
+            });
+            if (existingIngredients.length !== ingredientIds.length) {
+              throw createHttpError(
+                404,
+                `One or more ingredients not found for size ${updatedSize.label}`
+              );
+            }
+            existingSize.ingredients = updatedSize.ingredients;
+          } else {
+            existingSize.ingredients = [];
           }
-          existingSize.ingredients = updatedSize.ingredients;
         }
       }
     }
+
+    // For non-ramen items, ensure a "Classic" size exists if sizes are updated
+    if (
+      menuItem.category !== "ramen" &&
+      updateData.sizes &&
+      updateData.sizes.length > 0 &&
+      !menuItem.sizes.some((s) => s.label === "Classic")
+    ) {
+      const classicSize = updateData.sizes.find((s) => s.label === "Classic");
+      if (classicSize) {
+        menuItem.sizes.push({
+          label: "Classic",
+          price: parseFloat(classicSize.price) || 0,
+          ingredients: [],
+          isAvailable: true,
+        });
+      }
+    }
+
+    const updatedMenu = await menuItem.save();
+    console.log("Updated menu:", updatedMenu);
+
+    // Populate the response
+    const populatedMenu = await Menu.findById(id).populate({
+      path: "sizes.ingredients.ingredient",
+      select: "name unit batches",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Menu updated successfully",
+      data: populatedMenu || updatedMenu,
+    });
+  } catch (error) {
+    console.error("Update error:", error);
+    next(error);
+  }
+};
+
+const deleteSizeIngredient = async (req, res, next) => {
+  try {
+    const { menuId, label, ingredientId } = req.params;
+
+    console.log("Received delete request:", { menuId, label, ingredientId }); // Debug
+
+    if (!ingredientId) {
+      throw createHttpError(400, "Ingredient ID is required");
+    }
+
+    const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+    if (!isValidObjectId(ingredientId)) {
+      throw createHttpError(400, `Invalid ingredient ID: ${ingredientId}`);
+    }
+
+    const menuItem = await Menu.findById(menuId);
+    if (!menuItem) {
+      throw createHttpError(404, "Menu item not found");
+    }
+
+    const size = menuItem.sizes.find((s) => s.label === label);
+    if (!size) {
+      throw createHttpError(404, `Size '${label}' not found`);
+    }
+
+    console.log(
+      "Current ingredients in size:",
+      JSON.stringify(size.ingredients, null, 2)
+    ); // Debug
+
+    const ingredientIndex = size.ingredients.findIndex((ing) => {
+      const currentId =
+        typeof ing.ingredient === "object" && ing.ingredient
+          ? (ing.ingredient._id || ing.ingredient.id)?.toString()
+          : ing.ingredient?.toString();
+      return currentId === ingredientId.toString();
+    });
+
+    if (ingredientIndex === -1) {
+      console.log(
+        "Available ingredient IDs:",
+        size.ingredients
+          .map((ing) =>
+            (typeof ing.ingredient === "object" && ing.ingredient
+              ? ing.ingredient._id || ing.ingredient.id
+              : ing.ingredient
+            )?.toString()
+          )
+          .filter(Boolean)
+      ); // Debug
+      throw createHttpError(404, "Ingredient not found in size");
+    }
+
+    size.ingredients.splice(ingredientIndex, 1);
+    await menuItem.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Ingredient deleted successfully",
+      data: menuItem,
+    });
+  } catch (error) {
+    console.error("Delete error:", error); // Debug
+    next(error);
+  }
+};
+
+const addSizeIngredient = async (req, res, next) => {
+  try {
+    const { menuId, label } = req.params;
+    const { ingredientId, quantity } = req.body;
+
+    console.log("Received ingredientId:", ingredientId); // Debug
+
+    if (!ingredientId || !quantity || quantity <= 0) {
+      throw createHttpError(
+        400,
+        "Ingredient ID and positive quantity are required"
+      );
+    }
+
+    const ingredient = await Ingredient.findById(ingredientId);
+    if (!ingredient) {
+      throw createHttpError(404, "Ingredient not found");
+    }
+
+    if (!ingredientId || !quantity || quantity <= 0) {
+      throw createHttpError(
+        400,
+        "Ingredient ID and positive quantity are required"
+      );
+    }
+
+    const menuItem = await Menu.findById(menuId);
+    if (!menuItem) {
+      throw createHttpError(404, "Menu item not found");
+    }
+
+    const size = menuItem.sizes.find((s) => s.label === label);
+    if (!size) {
+      throw createHttpError(404, `Size '${label}' not found`);
+    }
+
+    const exists = size.ingredients.some((ing) => {
+      const currentId =
+        typeof ing.ingredient === "object"
+          ? ing.ingredient._id?.toString()
+          : ing.ingredient?.toString();
+      return currentId === ingredientId.toString();
+    });
+
+    if (exists) {
+      throw createHttpError(400, "Ingredient already exists in size");
+    }
+
+    size.ingredients.push({
+      ingredient: ingredientId,
+      quantity: parseFloat(quantity),
+    });
 
     await menuItem.save();
 
     res.status(200).json({
       success: true,
-      message: "Menu updated successfully",
+      message: "Ingredient added successfully",
+      data: menuItem,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+const updateSizeIngredientQuantity = async (req, res, next) => {
+  try {
+    const { menuId, label, ingredientId } = req.params;
+    const { quantity } = req.body;
+
+    if (typeof quantity !== "number" || quantity <= 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Valid quantity is required" });
+    }
+
+    const menuItem = await Menu.findById(menuId);
+    if (!menuItem) {
+      throw createHttpError(404, "Menu item not found");
+    }
+
+    const size = menuItem.sizes.find((s) => s.label === label);
+    if (!size) {
+      throw createHttpError(404, `Size '${label}' not found`);
+    }
+
+    const ingredientEntry = size.ingredients.find((ing) => {
+      const idToCompare =
+        typeof ing.ingredient === "object"
+          ? ing.ingredient._id?.toString()
+          : ing.ingredient?.toString();
+      return idToCompare === ingredientId;
+    });
+
+    if (!ingredientEntry) {
+      throw createHttpError(404, "Ingredient not found in size");
+    }
+
+    // Update quantity
+    ingredientEntry.quantity = quantity;
+    await menuItem.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Ingredient quantity updated successfully",
       data: menuItem,
     });
   } catch (error) {
@@ -626,22 +875,96 @@ const updateMenu = async (req, res, next) => {
   }
 };
 
-const searchMenuItems = async (req, res) => {
+const updateSizeIngredient = async (req, res, next) => {
   try {
-    const { query } = req.query;
+    const { menuId, label, ingredientId } = req.params;
+    const { newIngredientId, quantity } = req.body;
 
-    if (!query) {
-      return res.status(400).json({ message: "Search query is required" });
+    // Find menu item
+    const menuItem = await Menu.findById(menuId);
+    if (!menuItem) {
+      throw createHttpError(404, "Menu item not found");
     }
 
-    const menuItems = await Menu.find({
-      name: { $regex: query, $options: "i" },
-    }).populate("ingredients.ingredient");
+    // Find size
+    const size = menuItem.sizes.find((s) => s.label === label);
+    if (!size) {
+      throw createHttpError(404, `Size '${label}' not found`);
+    }
 
-    res.status(200).json(menuItems);
+    // Find the ingredient entry
+    const ingredientEntry = size.ingredients.find((ing) => {
+      const idToCompare =
+        typeof ing.ingredient === "object"
+          ? ing.ingredient._id?.toString()
+          : ing.ingredient?.toString();
+      return idToCompare === ingredientId.toString();
+    });
+
+    if (!ingredientEntry) {
+      throw createHttpError(404, "Ingredient not found in size");
+    }
+
+    // Update ingredient if newIngredientId provided
+    if (newIngredientId && newIngredientId !== ingredientId) {
+      // Verify new ingredient exists
+      const newIngredient = await Ingredient.findById(newIngredientId);
+      if (!newIngredient) {
+        throw createHttpError(404, "New ingredient not found");
+      }
+
+      // Check if new ingredient already exists in this size
+      const exists = size.ingredients.some((ing) => {
+        const currentId =
+          typeof ing.ingredient === "object"
+            ? ing.ingredient._id?.toString()
+            : ing.ingredient?.toString();
+        return currentId === newIngredientId.toString();
+      });
+
+      if (exists) {
+        throw createHttpError(400, "Ingredient already exists in this size");
+      }
+
+      ingredientEntry.ingredient = newIngredientId;
+    }
+
+    // Update quantity if provided
+    if (quantity !== undefined && quantity !== null) {
+      if (typeof quantity !== "number" || quantity <= 0) {
+        throw createHttpError(400, "Quantity must be a positive number");
+      }
+      ingredientEntry.quantity = quantity;
+    }
+
+    await menuItem.save();
+
+    // Determine success message
+    let message = "Updated successfully";
+    if (newIngredientId && quantity !== undefined) {
+      message = "Ingredient and quantity updated successfully";
+    } else if (newIngredientId) {
+      message = "Ingredient updated successfully";
+    } else if (quantity !== undefined) {
+      message = "Quantity updated successfully";
+    }
+
+    res.status(200).json({
+      success: true,
+      message,
+      data: menuItem,
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
-
-export { addMenu, updateMenu, getAllMenu, getMenuById };
+export {
+  addMenu,
+  updateMenu,
+  getAllMenu,
+  getMenuById,
+  deleteSizeIngredient,
+  addSizeIngredient,
+  updateSizeIngredientQuantity,
+  updateSizeIngredient,
+};

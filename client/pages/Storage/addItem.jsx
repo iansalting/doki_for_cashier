@@ -27,7 +27,7 @@ export default function Ingredient() {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/ingredients/post",
+        "http://localhost:8000/api/ingredients/",
         { name, unit },
         {
           headers: {

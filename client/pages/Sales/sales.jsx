@@ -116,6 +116,34 @@ const Sales = () => {
     fetchMonthlySales();
   }, [selectedYear, token]);
 
+  const handleDownloadExcel = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/view/superadmin/sales/sales-summary?year=${selectedYear}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to download report");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `sales-summary-${selectedYear}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Error downloading Excel: " + err.message);
+    }
+  };
+
   const colors = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -139,6 +167,10 @@ const Sales = () => {
 
   return (
     <div className="sales-container">
+      <div className="sales-download-button">
+        <button onClick={handleDownloadExcel}>⬇️ Download Excel Report</button>
+      </div>
+
       {/* Daily Sales Summary */}
       <h2 className="sales-title">📆 Daily Sales Summary</h2>
       {loadingDaily ? (

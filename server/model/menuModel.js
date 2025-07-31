@@ -1,3 +1,4 @@
+// Updated MenuItemSchema - Single source for images
 import mongoose from "mongoose";
 
 const MenuItemSchema = new mongoose.Schema(
@@ -39,11 +40,7 @@ const MenuItemSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    imageUrlPort5000: {
-      type: String,
-      trim: true,
-    },
-    imageUrlPort8000: {
+    imageUrl: {
       type: String,
       trim: true,
     },
@@ -78,15 +75,16 @@ const MenuItemSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ADD THIS: Dynamic URL method that works for both systems
+// Method to get image URL - always from port 8000 (main system)
 MenuItemSchema.methods.getImageUrl = function() {
   if (!this.image) return null;
   
-  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
-  return `${baseUrl}/uploads/menu/${this.image}`;
+  // Always use port 8000 as the image source
+  const mainSystemUrl = process.env.MAIN_SYSTEM_URL || 'http://localhost:8000';
+  return `${mainSystemUrl}/uploads/menu/${this.image}`;
 };
 
-// ADD THIS: Virtual field for easy access in JSON responses
+// Virtual field for easy access in JSON responses
 MenuItemSchema.virtual('dynamicImageUrl').get(function() {
   return this.getImageUrl();
 });

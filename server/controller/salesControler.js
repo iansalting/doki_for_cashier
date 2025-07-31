@@ -1,4 +1,184 @@
+import ExcelJS from "exceljs";
+import fs from "fs";
+import path from "path";
 import Order from "../model/orderModel.js";
+
+const generateSalesSummaryExcel = async (req, res) => {
+  try {
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+
+    const startOfYear = new Date(year, 0, 1);
+    const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+
+    // Monthly Sales Aggregation
+    const monthlySales = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startOfYear, $lte: endOfYear },
+          status: "completed",
+        },
+      },
+      {
+        $group: {
+          _id: { month: { $month: "$createdAt" } },
+          totalRevenue: { $sum: "$bills.total" },
+          totalOrders: { $sum: 1 },
+          averageOrderValue: { $avg: "$bills.total" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          month: "$_id.month",
+          totalRevenue: { $round: ["$totalRevenue", 2] },
+          totalOrders: 1,
+          averageOrderValue: { $round: ["$averageOrderValue", 2] },
+        },
+      },
+      { $sort: { month: 1 } },
+    ]);
+
+    const monthNames = [
+      "", "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ];
+
+    // Fill all 12 months
+    const filledMonths = [];
+    for (let i = 1; i <= 12; i++) {
+      const m = monthlySales.find((m) => m.month === i) || {
+        totalRevenue: 0,
+        totalOrders: 0,
+        averageOrderValue: 0,
+      };
+      filledMonths.push({
+        month: monthNames[i],
+        ...m,
+      });
+    }
+
+    // Yearly summary
+    const totalYearlyRevenue = filledMonths.reduce((a, b) => a + b.totalRevenue, 0);
+    const totalYearlyOrders = filledMonths.reduce((a, b) => a + b.totalOrders, 0);
+    const averageOrderValue =
+      totalYearlyOrders > 0 ? totalYearlyRevenue / totalYearlyOrders : 0;
+
+    const previousYear = year - 1;
+    const previousYearSales = await Order.aggregate([
+      {
+        $match: {
+          createdAt: {
+            $gte: new Date(previousYear, 0, 1),
+            $lte: new Date(previousYear, 11, 31, 23, 59, 59, 999),
+          },
+          status: "completed",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$bills.total" },
+          totalOrders: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const previous = previousYearSales[0] || { totalRevenue: 0, totalOrders: 0 };
+    const revenueGrowth =
+      previous.totalRevenue > 0
+        ? ((totalYearlyRevenue - previous.totalRevenue) / previous.totalRevenue) * 100
+        : 0;
+    const orderGrowth =
+      previous.totalOrders > 0
+        ? ((totalYearlyOrders - previous.totalOrders) / previous.totalOrders) * 100
+        : 0;
+
+    // Top 5 Best-Selling Items
+    const topSales = await Order.aggregate([
+      { $match: { status: "completed" } },
+      { $unwind: "$items" },
+      {
+        $group: {
+          _id: "$items.menuItem",
+          totalQuantitySold: { $sum: "$items.quantity" },
+        },
+      },
+      {
+        $lookup: {
+          from: "menus",
+          localField: "_id",
+          foreignField: "_id",
+          as: "menu",
+        },
+      },
+      { $unwind: "$menu" },
+      {
+        $project: {
+          itemName: "$menu.name",
+          category: "$menu.category",
+          price: "$menu.price",
+          totalQuantitySold: 1,
+          totalRevenue: {
+            $multiply: ["$menu.price", "$totalQuantitySold"],
+          },
+        },
+      },
+      { $sort: { totalQuantitySold: -1 } },
+      { $limit: 5 },
+    ]);
+
+    // Begin Excel file
+    const workbook = new ExcelJS.Workbook();
+
+    // Monthly Sales Sheet
+    const monthSheet = workbook.addWorksheet("📅 Monthly Sales");
+    monthSheet.columns = [
+      { header: "Month", key: "month", width: 15 },
+      { header: "Total Revenue", key: "totalRevenue", width: 20 },
+      { header: "Total Orders", key: "totalOrders", width: 15 },
+      { header: "Avg Order Value", key: "averageOrderValue", width: 20 },
+    ];
+    filledMonths.forEach((m) => monthSheet.addRow(m));
+
+    // Top 5 Sales Sheet
+    const topSheet = workbook.addWorksheet("🔥 Top 5 Items");
+    topSheet.columns = [
+      { header: "Item Name", key: "itemName", width: 30 },
+      { header: "Category", key: "category", width: 20 },
+      { header: "Price", key: "price", width: 10 },
+      { header: "Quantity Sold", key: "totalQuantitySold", width: 15 },
+      { header: "Total Revenue", key: "totalRevenue", width: 15 },
+    ];
+    topSales.forEach((item) => topSheet.addRow(item));
+
+    // Summary Sheet
+    const summarySheet = workbook.addWorksheet("📊 Yearly Summary");
+    summarySheet.addRow(["Year", year]);
+    summarySheet.addRow(["Total Revenue", totalYearlyRevenue.toFixed(2)]);
+    summarySheet.addRow(["Total Orders", totalYearlyOrders]);
+    summarySheet.addRow(["Average Order Value", averageOrderValue.toFixed(2)]);
+    summarySheet.addRow(["Revenue Growth (%)", revenueGrowth.toFixed(2)]);
+    summarySheet.addRow(["Order Growth (%)", orderGrowth.toFixed(2)]);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=sales-summary-${year}.xlsx`
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.status(200).send(buffer);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate Excel report",
+      error: error.message,
+    });
+  }
+};
 
 const getTopSales = async (req, res) => {
   try {
@@ -456,4 +636,4 @@ const getSalesForDate = async (req, res) => {
   }
 };
 
-export { getTopSales, getDailySales, getMonthlySales, getSalesForDate };
+export { getTopSales, getDailySales, getMonthlySales, getSalesForDate, generateSalesSummaryExcel};
