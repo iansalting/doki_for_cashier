@@ -3,7 +3,6 @@ import axios from "axios";
 import './image.css'
 
 const BASE_URL = "http://localhost:8000";
-const token = localStorage.getItem("token");
 
 export default function ImageUpload() {
   const [menuItems, setMenuItems] = useState([]);
@@ -12,17 +11,45 @@ export default function ImageUpload() {
   const [imageFile, setImageFile] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+
+  // Get fresh token and check auth
+  const getToken = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setIsAuthenticated(false);
+      return null;
+    }
+    return token;
+  };
+
+  // Handle auth errors
+  const handleAuthError = (err) => {
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      localStorage.removeItem("token"); // Clear invalid token
+      setIsAuthenticated(false);
+      setError("Session expired. Please login again.");
+      return true;
+    }
+    return false;
+  };
 
   // Fetch all menu items
   useEffect(() => {
     const fetchMenus = async () => {
+      const token = getToken();
+      if (!token) return;
+
       try {
         const res = await axios.get(`${BASE_URL}/api/menu-items`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setMenuItems(res.data);
+        setError(""); // Clear any previous errors
       } catch (err) {
-        setError("Failed to fetch menu items");
+        if (!handleAuthError(err)) {
+          setError("Failed to fetch menu items");
+        }
       }
     };
     fetchMenus();
@@ -31,14 +58,21 @@ export default function ImageUpload() {
   // Fetch specific selected item
   useEffect(() => {
     if (!selectedId) return;
+    
     const fetchMenuItem = async () => {
+      const token = getToken();
+      if (!token) return;
+
       try {
         const res = await axios.get(`${BASE_URL}/api/menu-items/${selectedId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setMenuItem(res.data);
+        setError("");
       } catch (err) {
-        setError("Failed to fetch menu item");
+        if (!handleAuthError(err)) {
+          setError("Failed to fetch menu item");
+        }
       }
     };
     fetchMenuItem();
@@ -49,6 +83,9 @@ export default function ImageUpload() {
       setError("Please select an item and image");
       return;
     }
+
+    const token = getToken();
+    if (!token) return;
 
     const formData = new FormData();
     formData.append("image", imageFile);
@@ -69,13 +106,18 @@ export default function ImageUpload() {
       setError("");
       setMenuItem(res.data.menuItem);
     } catch (err) {
-      setError(err.response?.data?.message || "Upload failed");
-      setMessage("");
+      if (!handleAuthError(err)) {
+        setError(err.response?.data?.message || "Upload failed");
+        setMessage("");
+      }
     }
   };
 
   const handleDelete = async () => {
     if (!selectedId || !window.confirm("Delete this image?")) return;
+
+    const token = getToken();
+    if (!token) return;
 
     try {
       const res = await axios.delete(
@@ -88,10 +130,25 @@ export default function ImageUpload() {
       setError("");
       setMenuItem(res.data.menuItem);
     } catch (err) {
-      setError(err.response?.data?.message || "Delete failed");
-      setMessage("");
+      if (!handleAuthError(err)) {
+        setError(err.response?.data?.message || "Delete failed");
+        setMessage("");
+      }
     }
   };
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="image-upload-container">
+        <h2>Authentication Required</h2>
+        <p>UNAUTHORIZED</p>
+        <button onClick={() => window.location.href = '/'}>
+          Go to Login
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="image-upload-container">
