@@ -734,151 +734,156 @@ export default function Dashboard() {
   };
 
   const handlePaymentConfirm = async (payment) => {
-  const paymentAmount = parseFloat(payment);
+    const paymentAmount = parseFloat(payment);
 
-  if (isNaN(paymentAmount) || paymentAmount < orderTotal) {
-    showToast("Invalid or insufficient payment", "error");
-    return;
-  }
-
-  setOrderLoading(true);
-  try {
-    const order = {
-      tableNumber: parseInt(localStorage.getItem("currentTableNumber")) || 0,
-      items: cart.items.map((item) => ({
-        menuItem: item.menuItem._id,
-        selectedSize: isRamenCategory(item.menuItem)
-          ? item.size.label
-          : undefined,
-        quantity: item.quantity,
-      })),
-    };
-
-    console.log("Order payload:", JSON.stringify(order, null, 2));
-
-    const response = await axios.post(
-      "http://localhost:8000/api/order/dashboard",
-      order,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    console.log("Backend response:", JSON.stringify(response.data, null, 2));
-
-    if (response.data.success) {
-      const receiptData = response.data.order || {}; // Use response.data.order
-
-      const validatedItems = Array.isArray(receiptData.items)
-        ? receiptData.items.map((item, index) => {
-            const cartItem = cart.items[index]; // Match by index
-            return {
-              name: item.menuItem?.name || cartItem?.name || "Unknown Item",
-              size: item.selectedSize || cartItem?.size?.label || "",
-              quantity: Number(item.quantity) || Number(cartItem?.quantity) || 0,
-              unitPrice:
-                Number(item.price) / Number(item.quantity) ||
-                Number(cartItem?.price) || 0,
-              subtotal:
-                Number(item.price) ||
-                (Number(item.price) / Number(item.quantity) || Number(cartItem?.price) || 0) *
-                  (Number(item.quantity) || Number(cartItem?.quantity) || 0),
-            };
-          })
-        : cart.items.map((cartItem) => ({
-            name: cartItem.name || "Unknown Item",
-            size: cartItem.size?.label || "",
-            quantity: Number(cartItem.quantity) || 0,
-            unitPrice: Number(cartItem.price) || 0,
-            subtotal: Number(cartItem.price) * Number(cartItem.quantity) || 0,
-          }));
-
-      const defaultStore = {
-        name: "DOKI DOKI RAMEN HOUSE",
-        address:
-          "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
-        phone: "+63 912 345 6789",
-        tin: "123-456-789-000",
-        businessPermit: "2024-001234",
-      };
-
-      const receiptObj = {
-        items: validatedItems,
-        store: receiptData.store || defaultStore,
-        orderNumber: receiptData._id?.slice(-8).toUpperCase() || `ORD-${Date.now()}`,
-        tableNumber:
-          receiptData.tableNumber ||
-          localStorage.getItem("currentTableNumber") ||
-          "N/A",
-        orderDate: receiptData.orderDate || new Date().toISOString(),
-        status: receiptData.status || "PENDING",
-        payment: paymentAmount,
-        bills: receiptData.bills || null,
-      };
-
-      console.log("Receipt object:", JSON.stringify(receiptObj, null, 2));
-
-      const actualTotal =
-        receiptObj.bills?.totalWithTax ||
-        validatedItems.reduce((sum, item) => sum + (item.subtotal || 0), 0) *
-          1.08;
-
-      setReceipt(receiptObj);
-      setChange(paymentAmount - actualTotal);
-
-      setShowReceipt(true);
-      setCart({ items: [] });
-
-      showToast("Order placed successfully!", "success");
-
-      setTimeout(() => {
-        if (showReceipt) {
-          closeReceipt();
-        }
-      }, 30000);
-    } else {
-      throw new Error(response.data.message || "Order failed");
+    if (isNaN(paymentAmount) || paymentAmount < orderTotal) {
+      showToast("Invalid or insufficient payment", "error");
+      return;
     }
-  } catch (err) {
-    console.error("Order error:", err);
-    const errorMessage =
-      err.response?.data?.message ||
-      err.response?.data?.error ||
-      err.message ||
-      "Failed to place order";
-    showToast(`Order failed: ${errorMessage}`, "error");
-  } finally {
-    setOrderLoading(false);
-  }
-};
+
+    setOrderLoading(true);
+    try {
+      const order = {
+        tableNumber: parseInt(localStorage.getItem("currentTableNumber")) || 0,
+        items: cart.items.map((item) => ({
+          menuItem: item.menuItem._id,
+          selectedSize: isRamenCategory(item.menuItem)
+            ? item.size.label
+            : undefined,
+          quantity: item.quantity,
+        })),
+      };
+
+      console.log("Order payload:", JSON.stringify(order, null, 2));
+
+      const response = await axios.post(
+        "http://localhost:8000/api/order/dashboard",
+        order,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("Backend response:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        const receiptData = response.data.order || {}; // Use response.data.order
+
+        const validatedItems = Array.isArray(receiptData.items)
+          ? receiptData.items.map((item, index) => {
+              const cartItem = cart.items[index]; // Match by index
+              return {
+                name: item.menuItem?.name || cartItem?.name || "Unknown Item",
+                size: item.selectedSize || cartItem?.size?.label || "",
+                quantity:
+                  Number(item.quantity) || Number(cartItem?.quantity) || 0,
+                unitPrice:
+                  Number(item.price) / Number(item.quantity) ||
+                  Number(cartItem?.price) ||
+                  0,
+                subtotal:
+                  Number(item.price) ||
+                  (Number(item.price) / Number(item.quantity) ||
+                    Number(cartItem?.price) ||
+                    0) *
+                    (Number(item.quantity) || Number(cartItem?.quantity) || 0),
+              };
+            })
+          : cart.items.map((cartItem) => ({
+              name: cartItem.name || "Unknown Item",
+              size: cartItem.size?.label || "",
+              quantity: Number(cartItem.quantity) || 0,
+              unitPrice: Number(cartItem.price) || 0,
+              subtotal: Number(cartItem.price) * Number(cartItem.quantity) || 0,
+            }));
+
+        const defaultStore = {
+          name: "DOKI DOKI RAMEN HOUSE",
+          address:
+            "381 SBM. Eliserio G. Tagle, Sampaloc 3, Dasmariñas, 4114 Cavite",
+          phone: "+63 912 345 6789",
+          tin: "123-456-789-000",
+          businessPermit: "2024-001234",
+        };
+
+        const receiptObj = {
+          items: validatedItems,
+          store: receiptData.store || defaultStore,
+          orderNumber:
+            receiptData._id?.slice(-8).toUpperCase() || `ORD-${Date.now()}`,
+          tableNumber:
+            receiptData.tableNumber ||
+            localStorage.getItem("currentTableNumber") ||
+            "N/A",
+          orderDate: receiptData.orderDate || new Date().toISOString(),
+          status: receiptData.status || "PENDING",
+          payment: paymentAmount,
+          bills: receiptData.bills || null,
+        };
+
+        console.log("Receipt object:", JSON.stringify(receiptObj, null, 2));
+
+        const actualTotal =
+          receiptObj.bills?.totalWithTax ||
+          validatedItems.reduce((sum, item) => sum + (item.subtotal || 0), 0) *
+            1.08;
+
+        setReceipt(receiptObj);
+        setChange(paymentAmount - actualTotal);
+
+        setShowReceipt(true);
+        setCart({ items: [] });
+
+        showToast("Order placed successfully!", "success");
+
+        setTimeout(() => {
+          if (showReceipt) {
+            closeReceipt();
+          }
+        }, 30000);
+      } else {
+        throw new Error(response.data.message || "Order failed");
+      }
+    } catch (err) {
+      console.error("Order error:", err);
+      const errorMessage =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Failed to place order";
+      showToast(`Order failed: ${errorMessage}`, "error");
+    } finally {
+      setOrderLoading(false);
+    }
+  };
   const closeReceipt = () => {
     setShowReceipt(false);
     setReceipt({});
     setChange(0);
   };
   const clearCart = useCallback(() => {
-  setCart({ items: [] });
-  localStorage.removeItem("cart");
-  showToast("Cart cleared successfully", "info");
-}, [showToast]);
+    setCart({ items: [] });
+    localStorage.removeItem("cart");
+    showToast("Cart cleared successfully", "info");
+  }, [showToast]);
 
-// Enhanced useEffect for cart persistence - ensure localStorage sync
-useEffect(() => {
-  const timer = setTimeout(() => {
-    if (cart.items.length === 0) {
-      // If cart is empty, make sure localStorage is also cleared
-      localStorage.removeItem("cart");
-    } else {
-      // Only save to localStorage if cart has items
-      localStorage.setItem("cart", JSON.stringify(cart));
-    }
-  }, 100);
+  // Enhanced useEffect for cart persistence - ensure localStorage sync
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (cart.items.length === 0) {
+        // If cart is empty, make sure localStorage is also cleared
+        localStorage.removeItem("cart");
+      } else {
+        // Only save to localStorage if cart has items
+        localStorage.setItem("cart", JSON.stringify(cart));
+      }
+    }, 100);
 
-  return () => clearTimeout(timer);
-}, [cart]);
+    return () => clearTimeout(timer);
+  }, [cart]);
 
   const printReceipt = () => {
     setPrintLoading(true);
