@@ -1,6 +1,6 @@
 import { useState } from "react";
 import IngredientPage from "./ingredientPage.jsx";
-import MenuPage from "./menupage.jsx";
+import MenuPage from "./menuPage.jsx";
 import './inventory.css';
 
 export default function InventoryAndMenuView() {
